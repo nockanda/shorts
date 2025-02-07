@@ -1,0 +1,42 @@
+#define NTC_PIN1 A0 //채널1
+#define NTC_PIN2 A1 //채널2
+#define R1 10000 //저항의크기(10k옴 = 10000옴)
+//공식을 위한 상수 3종세트
+//아~! 나중에 온도값을 보정한다면 C1,C2,C3값이 변하면 되는것이다!
+#define c1 1.009249522e-03
+#define c2 2.378405444e-04
+#define c3 2.019202697e-07
+
+float ch1_logR2, ch1_R2, ch1_T, ch1_Tc, ch1_Tf;
+float ch2_logR2, ch2_R2, ch2_T, ch2_Tc, ch2_Tf;
+
+void setup() {
+  Serial.begin(9600); //컴퓨터와 통신할거야!
+}
+
+void loop() {
+  //NTC서미스터에서 10bit 아날로그값을 읽는다(0~1023)
+  int Vo1 = analogRead(NTC_PIN1);
+  //계산하는 공식(그냥 사용하도록 하자)
+  ch1_R2 = R1 * (1023.0 / (float)Vo1 - 1.0);
+  ch1_logR2 = log(ch1_R2);
+  ch1_T = (1.0 / (c1 + c2*ch1_logR2 + c3*ch1_logR2*ch1_logR2*ch1_logR2));
+  //최종결과
+  ch1_Tc = ch1_T - 273.15; //온도(도씨)
+  //Tf = (Tc * 9.0)/ 5.0 + 32.0; //온도(화씨) 
+
+  int Vo2 = analogRead(NTC_PIN2);
+  //계산하는 공식(그냥 사용하도록 하자)
+  ch2_R2 = R1 * (1023.0 / (float)Vo2 - 1.0);
+  ch2_logR2 = log(ch2_R2);
+  ch2_T = (1.0 / (c1 + c2*ch2_logR2 + c3*ch2_logR2*ch2_logR2*ch2_logR2));
+  //최종결과
+  ch2_Tc = ch2_T - 273.15; //온도(도씨)
+  //Tf = (Tc * 9.0)/ 5.0 + 32.0; //온도(화씨) 
+
+  Serial.print(ch1_Tc);
+  Serial.print(", ");
+  Serial.println(ch2_Tc+3);
+  
+  delay(10);
+}
