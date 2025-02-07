@@ -1,0 +1,119 @@
+#include <Arduino.h>
+#define S0 4
+#define S1 5
+#define S2 6
+#define S3 7
+#define sensorOut 8
+//센서가 측정중이냐 아니냐를 판정하는 기준값
+#define th 300
+
+//센서가 측정한값이 여기 저장됨!
+int redFrequency = 0; //빨간색 성분
+int greenFrequency = 0; //녹색 성분
+int blueFrequency = 0; //파란색 성분
+
+//컬러블록은 6개고 각 블럭마다 BRG값이 있다!
+int color_box[][3] = {
+    {240,80,280}, //빨간색박스
+    {133,170,220}, //보라색박스
+    {78,170,88}, //하늘색박스
+    {93,63,123}, //핑크색박스
+    {172,206,127}, //녹색박스
+    {133,53,78}  //노란색박스
+};
+
+void setup() {
+    //컴퓨터와 통신할거야!
+    Serial.begin(9600);
+
+    pinMode(S0, OUTPUT);
+    pinMode(S1, OUTPUT);
+    pinMode(S2, OUTPUT);
+    pinMode(S3, OUTPUT);
+    pinMode(sensorOut, INPUT);
+    
+    // Setting frequency scaling to 20%
+    digitalWrite(S0,HIGH);
+    digitalWrite(S1,LOW);
+}
+void loop() {
+  // Setting RED (R) filtered photodiodes to be read
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,LOW);
+  
+  //sensorOut핀에 LOW신호가 측정될때까지의 시간을 us단위로 반환한다!
+  redFrequency = pulseIn(sensorOut, LOW);
+  
+  delay(100);
+  
+  // Setting GREEN (G) filtered photodiodes to be read
+  digitalWrite(S2,HIGH);
+  digitalWrite(S3,HIGH);
+  
+  // Reading the output frequency
+  greenFrequency = pulseIn(sensorOut, LOW);
+  
+  delay(100);
+ 
+  // Setting BLUE (B) filtered photodiodes to be read
+  digitalWrite(S2,LOW);
+  digitalWrite(S3,HIGH);
+  
+  //Reading the output frequency
+  blueFrequency = pulseIn(sensorOut, LOW);
+  
+  if(th > blueFrequency && th > redFrequency && th > greenFrequency){
+    //지금 뭔가 측정중인 상황이다!
+    //6개의 블럭과 거리를 측정해서 가장 짧은 거리인것이 정답이다!
+    float dist[6];
+    
+    int min_index = 0;
+    dist[0] =  sqrt(pow((color_box[0][0] - blueFrequency),2) +
+                pow((color_box[0][1] - redFrequency),2) +
+                pow((color_box[0][2] - greenFrequency),2));
+    float min = dist[0];
+    for(int i = 1;i<6;i++){
+      dist[i] =  sqrt(pow((color_box[i][0] - blueFrequency),2) +
+                pow((color_box[i][1] - redFrequency),2) +
+                pow((color_box[i][2] - greenFrequency),2));
+
+      if(min > dist[i]){
+        min = dist[i];
+        min_index = i;
+      }
+    }
+
+    Serial.print(blueFrequency);
+    Serial.print(", ");
+    Serial.print(redFrequency);
+    Serial.print(", ");
+    Serial.print(greenFrequency);
+    Serial.print(", ");
+    for(int i = 0;i<6;i++){
+      Serial.print(dist[i]);
+      Serial.print(", ");
+    }
+    Serial.println();
+
+
+    //i값이 가장 작은 거리의 인덱스가 된다!
+    if(min_index == 0){
+      Serial.println("빨간색박스!");
+    }else if(min_index == 1){
+      Serial.println("보라색박스!");
+    }else if(min_index == 2){
+      Serial.println("하늘색박스!");
+    }else if(min_index == 3){
+      Serial.println("핑크색박스!");
+    }else if(min_index == 4){
+      Serial.println("녹색박스!");
+    }else if(min_index == 5){
+      Serial.println("노란색박스!");
+    }
+  }else{
+    //센서위에 아무것도 없다!
+    Serial.println("센서위에 아무것도 없습니다!");
+  }
+  
+  delay(100);
+}
