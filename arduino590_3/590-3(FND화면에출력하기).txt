@@ -1,0 +1,44 @@
+#include <Arduino.h>
+#include <TM1637Display.h>
+//녹칸다가 연결해놓은 방법!
+#define CLK 2
+#define DIO 3
+
+TM1637Display display(CLK, DIO);
+
+#define NTC_PIN A0 //서미스터가 연결된 핀번호
+#define R1 10000 //저항의크기(10k옴 = 10000옴)
+//공식을 위한 상수 3종세트
+//아~! 나중에 온도값을 보정한다면 C1,C2,C3값이 변하면 되는것이다!
+#define c1 1.009249522e-03
+#define c2 2.378405444e-04
+#define c3 2.019202697e-07
+
+float logR2, R2, T, Tc, Tf;
+
+void setup() {
+  Serial.begin(9600); //컴퓨터와 통신할거야!
+  //TM1637의 밝기조절하는 함수를 1회 호출
+  display.setBrightness(0x0f);
+}
+
+void loop() {
+  //NTC서미스터에서 10bit 아날로그값을 읽는다(0~1023)
+  int Vo = analogRead(NTC_PIN);
+  //계산하는 공식(그냥 사용하도록 하자)
+  R2 = R1 * (1023.0 / (float)Vo - 1.0);
+  logR2 = log(R2);
+  T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+  //최종결과
+  Tc = T - 273.15; //온도(도씨)
+  //Tf = (Tc * 9.0)/ 5.0 + 32.0; //온도(화씨) 
+
+  //숫자를 입력하면 숫자를 FND에 출력해주는 함수!
+  //정수값을 출력해준다!
+  //TM1637에 소수점을 출력할 수 없으니 10을 곱해서 3자리로 표현하겠다!
+  //그리고 제일 마지막 숫자는 소수점 첫째짜리로 마음속으로 생각한다!
+  display.showNumberDec(Tc*10, false);
+  Serial.println(Tc);
+  
+  delay(1000); //1초간격으로 리플레시
+}
