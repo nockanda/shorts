@@ -1,0 +1,44 @@
+#define NTC_PIN A0 //서미스터가 연결된 핀번호
+#define R1 10000 //저항의크기(10k옴 = 10000옴)
+//공식을 위한 상수 3종세트
+//아~! 나중에 온도값을 보정한다면 C1,C2,C3값이 변하면 되는것이다!
+#define c1 1.009249522e-03
+#define c2 2.378405444e-04
+#define c3 2.019202697e-07
+
+//LED를 2번핀에 연결하겠다!
+#define led 2
+
+float logR2, R2, T, Tc, Tf;
+
+void setup() {
+  Serial.begin(9600); //컴퓨터와 통신할거야!
+  pinMode(led,OUTPUT); //LED를 사용할거야!
+
+  //주의 현재 녹칸다의 릴레이는 로우레벨트리거이다!
+  digitalWrite(led,HIGH);
+}
+
+void loop() {
+  //NTC서미스터에서 10bit 아날로그값을 읽는다(0~1023)
+  int Vo = analogRead(NTC_PIN);
+  //계산하는 공식(그냥 사용하도록 하자)
+  R2 = R1 * (1023.0 / (float)Vo - 1.0);
+  logR2 = log(R2);
+  T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+  //최종결과
+  Tc = T - 273.15; //온도(도씨)
+  //Tf = (Tc * 9.0)/ 5.0 + 32.0; //온도(화씨) 
+
+  if(Tc > 21){
+    //LED를 켠다
+    digitalWrite(led,LOW);
+  }else{
+    //LED를 끈다
+    digitalWrite(led,HIGH);
+  }
+
+  Serial.println(Tc);
+  
+  delay(100);
+}
