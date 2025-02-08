@@ -1,0 +1,49 @@
+#define relay0 2
+#define relay1 3
+#define relay2 4
+#define relay3 5
+#define btn0 6
+#define btn1 7
+#define btn2 8
+#define btn3 9
+
+void setup() {
+  Serial.begin(9600); //통신할거야~
+  pinMode(relay0,OUTPUT);
+  pinMode(relay1,OUTPUT);
+  pinMode(relay2,OUTPUT);
+  pinMode(relay3,OUTPUT);
+  pinMode(btn0,INPUT_PULLUP); //저항연결을 별도로 안했을떄 사용하는 방식
+  pinMode(btn1,INPUT_PULLUP); //저항연결을 별도로 안했을떄 사용하는 방식
+  pinMode(btn2,INPUT_PULLUP); //저항연결을 별도로 안했을떄 사용하는 방식
+  pinMode(btn3,INPUT_PULLUP); //저항연결을 별도로 안했을떄 사용하는 방식
+  //로우레벨 트리거는 시작할때 HIGH가 꺼진것이다!
+  digitalWrite(relay0,HIGH);
+  digitalWrite(relay1,HIGH);
+  digitalWrite(relay2,HIGH);
+  digitalWrite(relay3,HIGH);
+}
+
+void loop() {
+  //버튼0을 누르면 채널0의 상태가 토글된다!
+  if(digitalRead(btn0) == LOW){
+    //버튼을 누르면 1회 누른것으로 인정되어야한다!(채터링)
+    digitalWrite(relay0,!digitalRead(relay0)); //토글해라!
+    delay(300); //초보자 수준의 디바운스처리
+  }
+  if(digitalRead(btn1) == LOW){
+    //버튼을 누르면 1회 누른것으로 인정되어야한다!(채터링)
+    digitalWrite(relay1,!digitalRead(relay1)); //토글해라!
+    delay(300); //초보자 수준의 디바운스처리
+  }
+  if(digitalRead(btn2) == LOW){
+    //버튼을 누르면 1회 누른것으로 인정되어야한다!(채터링)
+    digitalWrite(relay2,!digitalRead(relay2)); //토글해라!
+    delay(300); //초보자 수준의 디바운스처리
+  }
+  if(digitalRead(btn3) == LOW){
+    //버튼을 누르면 1회 누른것으로 인정되어야한다!(채터링)
+    digitalWrite(relay3,!digitalRead(relay3)); //토글해라!
+    delay(300); //초보자 수준의 디바운스처리
+  }
+}
