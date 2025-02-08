@@ -1,0 +1,47 @@
+#define RPWM 5 //정회전
+#define LPWM 6 //역회전
+
+#define btn1 2
+#define btn2 3
+
+bool is_run = false;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(LPWM, OUTPUT);
+  pinMode(btn1, INPUT_PULLUP);
+  pinMode(btn2, INPUT_PULLUP);
+  //기본 역방향은 사용안하는 상태
+  digitalWrite(LPWM,LOW);
+}
+
+void loop() {
+  if(digitalRead(btn1) == LOW){
+    //정지(감속)
+    if(is_run){
+      //작동중이네?(감속멈춤)
+    }else{
+      //이미 멈춰있네?(아무것도 안함)
+      for(int i = 255;i>=0;i--){
+        analogWrite(RPWM, i);
+        delay(20);
+      }
+    }
+
+    is_run = false;
+  }
+  if(digitalRead(btn2) == LOW){
+    //작동(가속)
+    if(is_run){
+      //이미 작동중이네?
+    }else{
+      //멈춰있네?(가속작동)
+      for(int i = 0;i<256;i++){
+        analogWrite(RPWM, i);
+        delay(20);
+      }
+    }
+
+    is_run = true;
+  }
+}
