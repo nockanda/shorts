@@ -1,0 +1,26 @@
+#define RPWM 5 //정회전
+#define LPWM 6 //역회전
+
+#define btn1 2
+#define btn2 3
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(RPWM, OUTPUT);
+  pinMode(LPWM, OUTPUT);
+  pinMode(btn1, INPUT_PULLUP);
+  pinMode(btn2, INPUT_PULLUP);
+  //기본 역방향은 사용안하는 상태
+  digitalWrite(LPWM,LOW);
+}
+
+void loop() {
+  if(digitalRead(btn1) == LOW){
+    //정지
+    digitalWrite(RPWM, LOW);
+  }
+  if(digitalRead(btn2) == LOW){
+    //작동
+    digitalWrite(RPWM, HIGH);
+  }
+}
