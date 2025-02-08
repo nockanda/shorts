@@ -1,0 +1,132 @@
+#define RPWM 5 //정회전
+#define LPWM 6 //역회전
+
+#define ACCEL 2 //2ms
+
+#define btn1 2
+#define btn2 3
+#define btn3 4
+
+#define END_IR_Sensor 7
+#define START_IR_Sensor 8
+
+int MAX_PWM = 255;
+
+unsigned long t = 0; //10ms간격을 만들어내기 위한 변수
+int is_run = 0; //0이면 감속멈춤, 1이면 가속, 2면즉시멈춤
+bool work_run = false; //true면 작업시작, false면 멈춤
+int pwm_power = 0;
+
+bool old_END_IR_SERNSOR = HIGH;
+bool old_START_IR_SERNSOR = HIGH;
+bool last_object_check = false;
+unsigned long last_object_t = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(LPWM, OUTPUT);
+  pinMode(END_IR_Sensor, INPUT);
+  pinMode(START_IR_Sensor, INPUT);
+  pinMode(btn1, INPUT_PULLUP);
+  pinMode(btn2, INPUT_PULLUP);
+  pinMode(btn3, INPUT_PULLUP);
+  //기본 역방향은 사용안하는 상태
+  digitalWrite(LPWM,LOW);
+}
+
+void loop() {
+  if(last_object_check){
+    if(millis() - last_object_t > 10000){
+      //마지막 물건이 나간후 2초가 지났다!
+      is_run = 0;
+      last_object_check = false;
+    }
+  }
+  
+  //컨베이어밸트의 속도를 제어하는 파트
+  //만약 작동버튼이 눌려진 상태라면 pwm_power를 1씩 증가해서 255까지 올린다
+  //멈춤버튼이 눌려지면 pwm_power를 1씩 감소시켜서 0까지 내린다
+  //전체 간격을 blocking없이 10ms간격으로 수행한다
+  if(millis() - t > ACCEL){
+    t = millis();
+
+    //적외선 근접센서로 물건을 감지해서 멈추는 기능을 쓸래말래?
+    if(work_run){
+      //출발지 센서가 감지가 되었다
+      //없었는데 생겼다
+      bool now_END_IR_SERNSOR = digitalRead(END_IR_Sensor);
+      bool now_START_IR_SERNSOR = digitalRead(START_IR_Sensor);
+
+      //만약 종료지점 센서에 뭔가가 있으면 작동되지 않는다!
+      if(old_START_IR_SERNSOR == HIGH && now_START_IR_SERNSOR == LOW && now_END_IR_SERNSOR == HIGH){
+        //센서에 물건이 감지되었다!(하강엣지)
+        //컨베이어밸트 작동
+        last_object_check = true;
+        last_object_t = millis();
+        is_run = 1;
+      }
+      if(old_END_IR_SERNSOR == HIGH && now_END_IR_SERNSOR == LOW){
+        //센서에 물건이 감지되었다!(하강엣지)
+        //컨베이어밸트 멈춤
+        is_run = 0;
+      }
+      if(old_END_IR_SERNSOR == LOW && now_END_IR_SERNSOR == HIGH){
+        //있었던 물건이 사라졌다(상승엣지)
+        //컨베이어밸트 다시작동
+        //마지막으로 물건이 사라지고 2초가 경과하면 자동으로 멈춤
+        last_object_check = true;
+        last_object_t = millis();
+        is_run = 1;
+      }
+
+      old_END_IR_SERNSOR = now_END_IR_SERNSOR;
+      old_START_IR_SERNSOR = now_START_IR_SERNSOR;
+    }
+
+    
+    if(is_run == 1){
+      //작동중
+      //가변저항값을 읽는다
+      //가변저항값을 0~255사이의값으로 바꿔서 MAX_PWM에 대입한다
+      int analog = analogRead(A0);
+      MAX_PWM = map(analog,0,1023,0,255);
+      
+      if(pwm_power > MAX_PWM){
+        pwm_power--;
+      }else if(pwm_power < MAX_PWM){
+        pwm_power++;
+      }else{
+        //pwm_power == MAX_PWM
+        //아무것도 안함
+      }
+    }else if(is_run == 0){
+      //멈추는중
+      pwm_power--;
+      if(pwm_power < 0) pwm_power = 0;
+    }else if(is_run == 2){
+      //즉시멈춤
+      pwm_power = 0;
+    }
+    analogWrite(RPWM,pwm_power);
+  }
+  
+
+  //어떤 버튼이 눌려졌는지 감지하는 파트
+  if(digitalRead(btn1) == LOW){
+    //작업종료
+    is_run = 0;
+    work_run = false;
+  }
+  if(digitalRead(btn2) == LOW){
+    //작업시작
+    last_object_check = true;
+    last_object_t = millis();
+    is_run = 1;
+    work_run = true;
+  }
+  if(digitalRead(btn3) == LOW){
+    //즉시멈춤
+    is_run = 2;
+    work_run = false;
+  }
+}
