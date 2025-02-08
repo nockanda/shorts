@@ -1,0 +1,53 @@
+#define relay0 2
+#define relay1 3
+#define relay2 4
+#define relay3 5
+
+#define remote0 6 //B 채널0
+#define remote1 7 //D 채널1
+#define remote2 8 //A 채널2
+#define remote3 9 //C 채널3
+
+void setup() {
+  Serial.begin(9600); //통신할거야~
+  pinMode(relay0,OUTPUT);
+  pinMode(relay1,OUTPUT);
+  pinMode(relay2,OUTPUT);
+  pinMode(relay3,OUTPUT);
+  pinMode(remote0,INPUT);
+  pinMode(remote1,INPUT);
+  pinMode(remote2,INPUT);
+  pinMode(remote3,INPUT);
+  //로우레벨 트리거는 시작할때 HIGH가 꺼진것이다!
+  digitalWrite(relay0,HIGH);
+  digitalWrite(relay1,HIGH);
+  digitalWrite(relay2,HIGH);
+  digitalWrite(relay3,HIGH);
+}
+
+void loop() {
+  if(digitalRead(remote0) == HIGH){
+    //리모컨의 B가 눌려졌다!
+    //토글된다 = 꺼져있으면 켜지고, 켜져있으면 꺼진다
+    digitalWrite(relay0, !digitalRead(relay0));
+    delay(300); //초보적인 디바운스처리
+  }
+  if(digitalRead(remote1) == HIGH){
+    //리모컨의 D가 눌려졌다!
+    //토글된다 = 꺼져있으면 켜지고, 켜져있으면 꺼진다
+    digitalWrite(relay1, !digitalRead(relay1));
+    delay(300); //초보적인 디바운스처리
+  }
+  if(digitalRead(remote2) == HIGH){
+    //리모컨의 A가 눌려졌다!
+    //토글된다 = 꺼져있으면 켜지고, 켜져있으면 꺼진다
+    digitalWrite(relay2, !digitalRead(relay2));
+    delay(300); //초보적인 디바운스처리
+  }
+  if(digitalRead(remote3) == HIGH){
+    //리모컨의 C가 눌려졌다!
+    //토글된다 = 꺼져있으면 켜지고, 켜져있으면 꺼진다
+    digitalWrite(relay3, !digitalRead(relay3));
+    delay(300); //초보적인 디바운스처리
+  }
+}
