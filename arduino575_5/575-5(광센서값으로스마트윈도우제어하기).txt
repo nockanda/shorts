@@ -1,0 +1,36 @@
+#define relay0 2
+#define relay1 3
+#define relay2 4
+#define relay3 5
+
+void setup() {
+  Serial.begin(9600); //통신할거야~
+  pinMode(relay0,OUTPUT);
+  pinMode(relay1,OUTPUT);
+  pinMode(relay2,OUTPUT);
+  pinMode(relay3,OUTPUT);
+  //로우레벨 트리거는 시작할때 HIGH가 꺼진것이다!
+  digitalWrite(relay0,HIGH);
+  digitalWrite(relay1,HIGH);
+  digitalWrite(relay2,HIGH);
+  digitalWrite(relay3,HIGH);
+}
+
+void loop() {
+  //CDS값을 아날로그 입력으로 가져온다!
+  int cds = analogRead(A0);
+  if(cds > 200){
+    //불투명
+    digitalWrite(relay0,HIGH);
+    digitalWrite(relay1,HIGH);
+    digitalWrite(relay2,HIGH);
+    digitalWrite(relay3,HIGH);
+  }else{
+    //투명
+    digitalWrite(relay0,LOW);
+    digitalWrite(relay1,LOW);
+    digitalWrite(relay2,LOW);
+    digitalWrite(relay3,LOW);
+  }
+  delay(100);
+}
