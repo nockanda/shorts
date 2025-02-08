@@ -1,0 +1,20 @@
+#define relay 2
+
+void setup() {
+  Serial.begin(9600); //통신할거야~
+  pinMode(relay,OUTPUT); //릴레이가 연결된핀을 출력으로 설정할거야~
+}
+
+void loop() {
+  //시리얼입력구문
+  if(Serial.available()){
+    //PC가 USB선을 통해서 아두이노에게 뭔가를 전송했다!
+    //컴퓨터가 문자 1을 전송하면 켜짐(투명해짐), 0을전송하면 꺼짐(불투명해짐)
+    char c = Serial.read();
+    if(c == '0'){
+      digitalWrite(relay,LOW);
+    }else if(c == '1'){
+      digitalWrite(relay,HIGH);
+    }
+  }
+}
