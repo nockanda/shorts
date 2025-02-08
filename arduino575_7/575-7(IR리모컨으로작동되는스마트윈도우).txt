@@ -1,0 +1,106 @@
+/*
+    FF30CF 1 //채널0 OFF
+    FF18E7 2 //채널0 ON
+    FF7A85 3 //채널1 OFF
+    FF10EF 4 //채널1 ON
+    FF38C7 5 //채널2 OFF
+    FF5AA5 6 //채널2 ON
+    FF42BD 7 //채널3 OFF
+    FF4AB5 8 //채널3 ON
+    FF52AD 9
+    FF6897 0
+    FF9867 100+
+    FFB04F 200+
+    FFE01F +
+    FFA857 -
+    FF906F EQ
+    FF22DD |◀◀
+    FF02FD ▶▶|
+    FFC23D ▶||
+    FFA25D CH-
+    FF629D CH
+    FFE21D CH+
+    */
+    
+#include <IRremote.h>
+int RECV_PIN = 6; //적외선수신기 6번핀에 연결
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+
+#define relay0 2
+#define relay1 3
+#define relay2 4
+#define relay3 5
+
+void setup() {
+  Serial.begin(9600); //통신할거야~
+  irrecv.enableIRIn();
+  pinMode(relay0,OUTPUT);
+  pinMode(relay1,OUTPUT);
+  pinMode(relay2,OUTPUT);
+  pinMode(relay3,OUTPUT);
+  //로우레벨 트리거는 시작할때 HIGH가 꺼진것이다!
+  digitalWrite(relay0,HIGH);
+  digitalWrite(relay1,HIGH);
+  digitalWrite(relay2,HIGH);
+  digitalWrite(relay3,HIGH);
+}
+
+void loop() {
+  if (irrecv.decode(&results)) {
+    
+    Serial.println(results.value, HEX);
+
+    //results.value 16진수로 해석해야한다!
+    if(results.value == 0xFF30CF){
+      //리모컨 1번을 누른것이다!
+      digitalWrite(relay0,HIGH);
+    }
+    if(results.value == 0xFF18E7){
+      //리모컨 2번을 누른것이다!
+      digitalWrite(relay0,LOW);
+    }
+    if(results.value == 0xFF7A85){
+      //리모컨 3번을 누른것이다!
+      digitalWrite(relay1,HIGH);
+    }
+    if(results.value == 0xFF10EF){
+      //리모컨 4번을 누른것이다!
+      digitalWrite(relay1,LOW);
+    }
+    if(results.value == 0xFF38C7){
+      //리모컨 5번을 누른것이다!
+      digitalWrite(relay2,HIGH);
+    }
+    if(results.value == 0xFF5AA5){
+      //리모컨 6번을 누른것이다!
+      digitalWrite(relay2,LOW);
+    }
+    if(results.value == 0xFF42BD){
+      //리모컨 7번을 누른것이다!
+      digitalWrite(relay3,HIGH);
+    }
+    if(results.value == 0xFF4AB5){
+      //리모컨 8번을 누른것이다!
+      digitalWrite(relay3,LOW);
+    }
+    if(results.value == 0xFFE01F){
+      //리모컨 +을 누른것이다!
+      //전체다 투명
+      digitalWrite(relay0,LOW);
+      digitalWrite(relay1,LOW);
+      digitalWrite(relay2,LOW);
+      digitalWrite(relay3,LOW);
+    }
+    if(results.value == 0xFFA857){
+      //리모컨 -을 누른것이다!
+      //전체다 불투명
+      digitalWrite(relay0,HIGH);
+      digitalWrite(relay1,HIGH);
+      digitalWrite(relay2,HIGH);
+      digitalWrite(relay3,HIGH);
+    }
+    irrecv.resume(); // Receive the next value
+  }
+  delay(100);
+}
