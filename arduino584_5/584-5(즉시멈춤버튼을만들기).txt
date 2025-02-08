@@ -1,0 +1,58 @@
+#define RPWM 5 //정회전
+#define LPWM 6 //역회전
+
+#define btn1 2
+#define btn2 3
+#define btn3 4
+
+unsigned long t = 0; //10ms간격을 만들어내기 위한 변수
+int is_run = 0; //0이면 감속멈춤, 1이면 가속, 2면즉시멈춤
+int pwm_power = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(LPWM, OUTPUT);
+  pinMode(btn1, INPUT_PULLUP);
+  pinMode(btn2, INPUT_PULLUP);
+  pinMode(btn3, INPUT_PULLUP);
+  //기본 역방향은 사용안하는 상태
+  digitalWrite(LPWM,LOW);
+}
+
+void loop() {
+  //컨베이어밸트의 속도를 제어하는 파트
+  //만약 작동버튼이 눌려진 상태라면 pwm_power를 1씩 증가해서 255까지 올린다
+  //멈춤버튼이 눌려지면 pwm_power를 1씩 감소시켜서 0까지 내린다
+  //전체 간격을 blocking없이 10ms간격으로 수행한다
+  if(millis() - t > 10){
+    t = millis();
+    if(is_run == 1){
+      //작동중
+      pwm_power++;
+      if(pwm_power > 255) pwm_power = 255;
+    }else if(is_run == 0){
+      //멈추는중
+      pwm_power--;
+      if(pwm_power < 0) pwm_power = 0;
+    }else if(is_run == 2){
+      //즉시멈춤
+      pwm_power = 0;
+    }
+    analogWrite(RPWM,pwm_power);
+  }
+  
+
+  //어떤 버튼이 눌려졌는지 감지하는 파트
+  if(digitalRead(btn1) == LOW){
+    //정지
+    is_run = 0;
+  }
+  if(digitalRead(btn2) == LOW){
+    //작동
+    is_run = 1;
+  }
+  if(digitalRead(btn3) == LOW){
+    //즉시멈춤
+    is_run = 2;
+  }
+}
