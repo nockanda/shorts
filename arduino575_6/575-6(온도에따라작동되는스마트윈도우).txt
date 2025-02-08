@@ -1,0 +1,52 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+//6번핀에 온도센서가 연결되었다!
+#define ONE_WIRE_BUS 6
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+
+#define relay0 2
+#define relay1 3
+#define relay2 4
+#define relay3 5
+
+void setup() {
+  Serial.begin(9600); //통신할거야~
+  sensors.begin();
+  pinMode(relay0,OUTPUT);
+  pinMode(relay1,OUTPUT);
+  pinMode(relay2,OUTPUT);
+  pinMode(relay3,OUTPUT);
+  //로우레벨 트리거는 시작할때 HIGH가 꺼진것이다!
+  digitalWrite(relay0,HIGH);
+  digitalWrite(relay1,HIGH);
+  digitalWrite(relay2,HIGH);
+  digitalWrite(relay3,HIGH);
+}
+
+void loop() {
+  sensors.requestTemperatures();
+  float tempC = sensors.getTempCByIndex(0);
+  if(tempC != DEVICE_DISCONNECTED_C) 
+  {
+    Serial.print("현재온도=");
+    Serial.print(tempC);
+    Serial.println("'C");
+    //정상적으로 온도측정
+    //만약 온도가 28도보다 크다면 자외선 차단을 하겠다!
+    if(tempC > 28){
+      //불투명
+      digitalWrite(relay0,HIGH);
+      digitalWrite(relay1,HIGH);
+      digitalWrite(relay2,HIGH);
+      digitalWrite(relay3,HIGH);
+    }else{
+      //투명
+      digitalWrite(relay0,LOW);
+      digitalWrite(relay1,LOW);
+      digitalWrite(relay2,LOW);
+      digitalWrite(relay3,LOW);
+    }
+  } 
+}
