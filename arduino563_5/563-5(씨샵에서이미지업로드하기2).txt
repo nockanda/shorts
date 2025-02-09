@@ -1,0 +1,75 @@
+#define ENABLE_GxEPD2_GFX 0
+
+//3컬러 e-paper이다!
+#include <GxEPD2_3C.h>
+
+//#include "bitmaps/nockanda3.h" // 2.9"  b/w/r
+GxEPD2_3C<GxEPD2_290_Z13c, GxEPD2_290_Z13c::HEIGHT> display(GxEPD2_290_Z13c(/*CS=5*/ 5, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4)); // GDEH029Z13 128x296, UC8151D
+
+byte black_img[4736];
+byte color_img[4736];
+
+//검정색과 컬러부분을 구조체로 만듬!(편하게 쓸려고 만듬)
+struct bitmap_pair
+{
+  const unsigned char* black;
+  const unsigned char* red;
+};
+
+void setup()
+{
+  Serial.begin(115200); //PC와 USB로 통신하겠다!
+  Serial.println();
+  Serial.println("setup");
+  delay(100);
+  display.init(115200, true, 2, false);
+
+  
+  /*
+  //E-paper에 이미지 출력하는 코드
+  display.setFullWindow();
+  drawBitmaps3c128x296();
+  display.powerOff();
+  */
+}
+
+void loop()
+{
+  if(Serial.available()){
+    //PC에서 USB로 전송한게 있다!
+    //검정4736바이트와 컬러4736바이트를 PC에서 수신해야한다!
+    Serial.println("데이터 수신");
+    Serial.readBytes(black_img,4736); //검정수신
+    Serial.readBytes(color_img,4736); //컬러수신
+    Serial.println("E-paper수정작업시작!");
+    display.setFullWindow();
+    drawBitmaps3c128x296();
+    display.powerOff();
+    Serial.println("E-paper수정작업종료!");
+  }
+}
+
+void drawBitmaps3c128x296()
+{
+  bitmap_pair bitmap_pairs = {black_img, color_img};
+
+  //아래부분은 E-paper에 이미지를 드로잉하는 과정으로 우리가 손댈부분이 전혀없음!
+  if ((display.epd2.WIDTH == 128) && (display.epd2.HEIGHT == 296) && display.epd2.hasColor)
+  {
+    display.firstPage();
+    do
+    {
+      display.fillScreen(GxEPD_WHITE);
+      display.drawInvertedBitmap(0, 0, bitmap_pairs.black, 128, 296, GxEPD_BLACK);
+      display.drawInvertedBitmap(0, 0, bitmap_pairs.red, 128, 296, GxEPD_RED);
+      /*
+      if (bitmap_pairs.red == WS_Bitmap3c128x296_red)
+      {
+        display.drawInvertedBitmap(0, 0, bitmap_pairs.red, 128, 296, GxEPD_RED);
+      }
+      else display.drawBitmap(0, 0, bitmap_pairs.red, 128, 296, GxEPD_RED);
+      */
+    }
+    while (display.nextPage());
+  }
+}
