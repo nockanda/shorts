@@ -1,0 +1,70 @@
+//아두이노에서 i2c통신을 위한 내장 라이브러리
+#include <Wire.h> 
+//INA219전용 라이브러리!
+#include <Adafruit_INA219.h>
+
+//INA219센서를 위한 클래스의 인스턴스
+//(클래스이름)    (내가만들인스턴스명)
+Adafruit_INA219 ina219A(0x40); //아무것도 납땜안함!
+Adafruit_INA219 ina219B(0x41); //A0을 쇼트시켰을때
+//Adafruit_INA219 ina219C(0x44); //A1을 쇼트시켰을때
+//Adafruit_INA219 ina219D(0x45); //A0과 A1을 모두 쇼트시켰을때
+
+void setup(void) 
+{
+  //PC와 통신을 하면서 결과를 시리얼모니터에 출력하겠다!
+  Serial.begin(9600);   
+  Serial.println("녹칸다의 INA219 전류 측정하기!");
+
+  //ina219모듈 2개는 아두이노와 반드시 연결된 상황!
+  ina219A.begin();
+  ina219B.begin();
+
+  // To use a slightly lower 32V, 1A range (higher precision on amps):
+  //ina219.setCalibration_32V_1A();
+  // Or to use a lower 16V, 400mA range (higher precision on volts and amps):
+  //녹칸다의 시연은 5V범위에서 진행되므로 아래 함수를 사용하도록 함!
+  //범위가 다르면 주석할 것!
+  //ina219.setCalibration_16V_400mA();
+
+  Serial.println("측정 준비 완료함!");
+}
+
+void loop(void) 
+{
+  float shuntvoltage = 0;
+  float busvoltage = 0; //로드의 전압
+  float current_mA = 0; //로드의 전류
+  float loadvoltage = 0;
+  float power_mW = 0;
+
+  shuntvoltage = ina219A.getShuntVoltage_mV();
+  busvoltage = ina219A.getBusVoltage_V(); //전압측정
+  current_mA = ina219A.getCurrent_mA(); //전류
+  power_mW = ina219A.getPower_mW();
+  loadvoltage = busvoltage + (shuntvoltage / 1000);
+
+  Serial.println("INA219 0x40의 값입니다!");
+  Serial.print("Bus Voltage:   "); Serial.print(busvoltage); Serial.println(" V");
+  Serial.print("Shunt Voltage: "); Serial.print(shuntvoltage); Serial.println(" mV");
+  Serial.print("Load Voltage:  "); Serial.print(loadvoltage); Serial.println(" V");
+  Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
+  Serial.print("Power:         "); Serial.print(power_mW); Serial.println(" mW");
+  Serial.println("");
+
+  shuntvoltage = ina219B.getShuntVoltage_mV();
+  busvoltage = ina219B.getBusVoltage_V(); //전압측정
+  current_mA = ina219B.getCurrent_mA(); //전류
+  power_mW = ina219B.getPower_mW();
+  loadvoltage = busvoltage + (shuntvoltage / 1000);
+
+  Serial.println("INA219 0x41의 값입니다!");
+  Serial.print("Bus Voltage:   "); Serial.print(busvoltage); Serial.println(" V");
+  Serial.print("Shunt Voltage: "); Serial.print(shuntvoltage); Serial.println(" mV");
+  Serial.print("Load Voltage:  "); Serial.print(loadvoltage); Serial.println(" V");
+  Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
+  Serial.print("Power:         "); Serial.print(power_mW); Serial.println(" mW");
+  Serial.println("");
+
+  delay(1000); //1초간격으로 측정함!
+}
