@@ -1,0 +1,72 @@
+//아두이노에서 i2c통신을 위한 내장 라이브러리
+#include <Wire.h> 
+//INA219전용 라이브러리!
+#include <Adafruit_INA219.h>
+//2004LCD를 위한 라이브러리
+#include <LiquidCrystal_I2C.h>
+
+//2004LCD의 인스턴스
+LiquidCrystal_I2C lcd(0x27,20,4); //주소,가로사이즈,세로사이즈
+
+//INA219센서를 위한 클래스의 인스턴스
+//(클래스이름)    (내가만들인스턴스명)
+Adafruit_INA219 ina219;
+
+void setup(void) 
+{
+  //PC와 통신을 하면서 결과를 시리얼모니터에 출력하겠다!
+  Serial.begin(9600);   
+  lcd.init(); //LCD시작하기!
+  lcd.backlight(); //백라이트를 켜라!
+  Serial.println("녹칸다의 INA219 전류 측정하기!");
+  
+  //아두이노에 연결된 i2c센서중에 0x40이라는 ID를 가지는 녀석을 찾아라!
+  if (! ina219.begin()) {
+    Serial.println("0x40주소를 가지는 INA219가 존재하지 않습니다!");
+    while (1) { delay(10); }
+  }
+
+  // To use a slightly lower 32V, 1A range (higher precision on amps):
+  //ina219.setCalibration_32V_1A();
+  // Or to use a lower 16V, 400mA range (higher precision on volts and amps):
+  //녹칸다의 시연은 5V범위에서 진행되므로 아래 함수를 사용하도록 함!
+  //범위가 다르면 주석할 것!
+  ina219.setCalibration_16V_400mA();
+
+  Serial.println("측정 준비 완료함!");
+}
+
+void loop(void) 
+{
+  float shuntvoltage = 0;
+  float busvoltage = 0; //로드의 전압
+  float current_mA = 0; //로드의 전류
+  float loadvoltage = 0;
+  float power_mW = 0;
+
+  shuntvoltage = ina219.getShuntVoltage_mV();
+  busvoltage = ina219.getBusVoltage_V(); //전압측정
+  current_mA = ina219.getCurrent_mA(); //전류
+  power_mW = ina219.getPower_mW();
+  loadvoltage = busvoltage + (shuntvoltage / 1000);
+
+  lcd.clear();//지금 LCD에 있는 모든 문자를 지워라!
+  lcd.setCursor(0,0); //첫번째줄에 글자를 쓰겠다!
+  lcd.print("BS:"); lcd.print(busvoltage); lcd.print("V"); 
+  lcd.setCursor(0,1); //두번째줄에 글자를 쓰겠다!
+  lcd.print("LS:"); lcd.print(loadvoltage); lcd.print("V");
+  lcd.setCursor(0,2); //세번째줄에 글자를 쓰겠다!
+  lcd.print("C:"); lcd.print(current_mA); lcd.print("mA");
+  lcd.setCursor(0,3); //네번째줄에 글자를 쓰겠다!
+  lcd.print("P:"); lcd.print(power_mW); lcd.print("mW");
+  
+  
+  Serial.print("Bus Voltage:   "); Serial.print(busvoltage); Serial.println(" V");
+  Serial.print("Shunt Voltage: "); Serial.print(shuntvoltage); Serial.println(" mV");
+  Serial.print("Load Voltage:  "); Serial.print(loadvoltage); Serial.println(" V");
+  Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
+  Serial.print("Power:         "); Serial.print(power_mW); Serial.println(" mW");
+  Serial.println("");
+
+  delay(1000); //1초간격으로 측정함!
+}
