@@ -1,0 +1,51 @@
+//E-paper에서 3-컬러모듈을 사용하기위한 헤더파일
+#include <GxEPD2_3C.h>
+//글자를 화면에 출력하기 위한 폰트
+#include <Fonts/FreeMonoBold9pt7b.h>
+
+GxEPD2_3C<GxEPD2_290_Z13c, GxEPD2_290_Z13c::HEIGHT> display(GxEPD2_290_Z13c(/*CS=5*/ 5, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4)); // GDEH029Z13 128x296, UC8151D
+
+void setup()
+{
+  //아래 코드는 라이브러리에서 사용하라는대로 사용한다!
+  display.init(115200, true, 2, false); // USE THIS for Waveshare boards with "clever" reset circuit, 2ms reset pulse
+  //글자 화면에 출력하기!
+  helloWorld();
+  display.hibernate();
+  display.powerOff();
+}
+
+const char HelloWorld[] = "NOCKANDA FOREVER!!!";
+
+void helloWorld()
+{
+  //화면방향
+  display.setRotation(1);//화면방향이 가로방향이다!
+  display.setFont(&FreeMonoBold9pt7b);
+  
+  int16_t tbx, tby; uint16_t tbw, tbh;
+  display.getTextBounds(HelloWorld, 0, 0, &tbx, &tby, &tbw, &tbh);
+  // center the bounding box by transposition of the origin:
+  uint16_t x = ((display.width() - tbw) / 2) - tbx;
+  uint16_t y = ((display.height() - tbh) / 2) - tby;
+  display.fillScreen(GxEPD_WHITE);
+  
+  
+  display.setFullWindow();
+  display.firstPage();
+  do
+  {
+    //화면클리어-검정색글자 출력-노란색글자출력
+    display.fillScreen(GxEPD_WHITE);
+    display.setTextColor(GxEPD_BLACK);
+    display.setCursor(x, y);
+    display.println(HelloWorld);
+    display.setTextColor(GxEPD_YELLOW);
+    display.setCursor(x, y+10);
+    display.println(HelloWorld);
+  }
+  while (display.nextPage());
+  
+}
+
+void loop() {};
