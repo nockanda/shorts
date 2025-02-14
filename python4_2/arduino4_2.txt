@@ -1,0 +1,26 @@
+//JSON데이터를 역직렬화하기위해서 필요함!
+#include <ArduinoJson.h>
+
+#define ir_sensor 2
+
+StaticJsonDocument<48> doc;
+
+void setup() {
+  //파이썬과 통신속도가 9600이다!(보-레이트가 9600이다)
+  Serial.begin(9600);
+  pinMode(ir_sensor,INPUT);
+}
+
+void loop() {  
+  int data = digitalRead(ir_sensor);
+
+  //detect라는 key값을 조회하면 0또는 1이 value로 출력됨!
+  doc["detect"] = data;
+  
+  String myjson = "";
+  serializeJson(doc, myjson);
+  Serial.println(myjson);  
+  delay(100);
+}
+
+
