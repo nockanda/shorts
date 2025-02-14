@@ -1,0 +1,28 @@
+//JSON데이터를 역직렬화하기위해서 필요함!
+#include <ArduinoJson.h>
+
+#define door 2
+
+StaticJsonDocument<48> doc;
+
+void setup() {
+  //파이썬과 통신속도가 9600이다!(보-레이트가 9600이다)
+  Serial.begin(9600);
+  //아두이노의 내장풀업저항을 사용해서 스위치를 사용하는 방식
+  pinMode(door,INPUT_PULLUP);
+}
+
+void loop() {
+  int data = digitalRead(door);
+
+  //보내줘야할 데이터가 1개이기 때문에 key-value쌍이 1세트 있으면됨!
+  //door라는 key값에 value가 문이 열렸는지 닫혔는지 신호에 해당함!
+  doc["door"] = data;
+  
+  String myjson = "";
+  serializeJson(doc, myjson);
+  Serial.println(myjson);  
+  delay(100);
+}
+
+
