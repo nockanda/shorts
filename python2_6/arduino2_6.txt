@@ -1,0 +1,23 @@
+#define btn1 2
+#define btn2 3
+
+void setup() {
+  Serial.begin(9600);
+  //버튼에 풀업저항을 연결안하고 쓸때는 아래와 같이 쓴다
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+}
+void loop() {
+  //풀업방식일때는 버튼이 눌려지면 LOW, 안눌려지면 HIGH신호가나온다
+  //버튼1이 눌려졌냐?
+  if(digitalRead(btn1) == LOW){
+    Serial.println("버튼1이 눌려졌습니다!");
+    delay(300);
+  }
+  //버튼2가 눌려졌냐?
+  if(digitalRead(btn2) == LOW){
+    Serial.println("버튼2가 눌려졌습니다!");
+    delay(300);
+  }
+}
+
