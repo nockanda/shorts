@@ -1,0 +1,27 @@
+//JSON데이터를 역직렬화하기위해서 필요함!
+#include <ArduinoJson.h>
+#include "DHT.h"
+#define DHTPIN 2
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+StaticJsonDocument<48> doc;
+
+void setup() {
+  //파이썬과 통신속도가 9600이다!(보-레이트가 9600이다)
+  Serial.begin(9600);
+  dht.begin();
+}
+
+void loop() {
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  doc["temp"] = t;
+  doc["humi"] = h;
+  String myjson = "";
+  serializeJson(doc, myjson);
+  Serial.println(myjson);  
+  delay(1000);
+}
+
