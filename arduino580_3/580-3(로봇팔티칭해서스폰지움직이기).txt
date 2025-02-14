@@ -1,0 +1,333 @@
+#include <Servo.h>
+
+Servo servo1; //축을 담당하는 서보모터
+Servo servo2; //6시방향의 서보모터
+Servo servo3; //12시방향의 서보모터
+Servo servo4; //그리퍼 서보모터
+
+
+
+//기본동작
+byte basic_pose[] = {90,20,20,150};
+//1집게를 벌린다
+//2목표물이 있는 위치로 로봇팔을 이동한다
+//3집게를 오므린다
+//4목표물을 들어올린다
+//5목적지로 이동한다
+//6목적지에서 집게를 벌려서 버린다
+byte robot_pose[][4] = {
+  {0,0,0,0},
+  {0,0,0,0},
+  {0,0,0,0},
+  {0,0,0,0},
+  {0,0,0,0},
+  {0,0,0,0}
+};
+
+unsigned long t = 0;
+bool task_run = false;
+int task_counter = 0;
+int servo_cnt = 0;
+
+//S라는 명령어를 전송할 경우 1번동작에서 2번동작까지만 일단 진행한다
+
+void setup() {
+  Serial.begin(9600);
+  //시작할때 원점부터 시작한다
+  set_center();
+}
+
+void loop() {
+  //작업을 시작하면 별도의 task가 진행된다
+  if(task_run){
+    if(millis() - t > 5){
+      t = millis();
+      //5ms의 타이밍을 생성한다!
+      if(task_counter == 0){
+        //기본동작 -> 1번포즈
+        servo1.write(basic_pose[0]+(robot_pose[0][0]-basic_pose[0])*(servo_cnt/300.0));
+        servo2.write(basic_pose[1]+(robot_pose[0][1]-basic_pose[1])*(servo_cnt/300.0));
+        servo3.write(basic_pose[2]+(robot_pose[0][2]-basic_pose[2])*(servo_cnt/300.0));
+        servo4.write(basic_pose[3]+(robot_pose[0][3]-basic_pose[3])*(servo_cnt/300.0));
+        servo_cnt++;
+
+        if(servo_cnt == 300){
+          //만약 완료되었다면  
+          task_counter++; //다음동작으로 이동
+          servo_cnt=0;
+        }
+      }else if(task_counter == 1){
+        //1번포즈 -> 2번포즈
+        servo1.write(robot_pose[0][0]+(robot_pose[1][0]-robot_pose[0][0])*(servo_cnt/300.0));
+        servo2.write(robot_pose[0][1]+(robot_pose[1][1]-robot_pose[0][1])*(servo_cnt/300.0));
+        servo3.write(robot_pose[0][2]+(robot_pose[1][2]-robot_pose[0][2])*(servo_cnt/300.0));
+        servo4.write(robot_pose[0][3]+(robot_pose[1][3]-robot_pose[0][3])*(servo_cnt/300.0));
+        servo_cnt++;
+
+        if(servo_cnt == 300){
+          //만약 완료되었다면  
+          task_counter++; //다음동작으로 이동
+          servo_cnt=0;
+        }
+      }else if(task_counter == 2){
+        //2번포즈 -> 3번포즈
+        servo1.write(robot_pose[1][0]+(robot_pose[2][0]-robot_pose[1][0])*(servo_cnt/300.0));
+        servo2.write(robot_pose[1][1]+(robot_pose[2][1]-robot_pose[1][1])*(servo_cnt/300.0));
+        servo3.write(robot_pose[1][2]+(robot_pose[2][2]-robot_pose[1][2])*(servo_cnt/300.0));
+        servo4.write(robot_pose[1][3]+(robot_pose[2][3]-robot_pose[1][3])*(servo_cnt/300.0));
+        servo_cnt++;
+
+        if(servo_cnt == 300){
+          //만약 완료되었다면  
+          task_counter++; //다음동작으로 이동
+          servo_cnt=0;
+        }
+      }else if(task_counter == 3){
+        //3번포즈 -> 4번포즈
+        servo1.write(robot_pose[2][0]+(robot_pose[3][0]-robot_pose[2][0])*(servo_cnt/300.0));
+        servo2.write(robot_pose[2][1]+(robot_pose[3][1]-robot_pose[2][1])*(servo_cnt/300.0));
+        servo3.write(robot_pose[2][2]+(robot_pose[3][2]-robot_pose[2][2])*(servo_cnt/300.0));
+        servo4.write(robot_pose[2][3]+(robot_pose[3][3]-robot_pose[2][3])*(servo_cnt/300.0));
+        servo_cnt++;
+
+        if(servo_cnt == 300){
+          //만약 완료되었다면  
+          task_counter++; //다음동작으로 이동
+          servo_cnt=0;
+        }
+      }else if(task_counter == 4){
+        //4번포즈 -> 5번포즈
+        servo1.write(robot_pose[3][0]+(robot_pose[4][0]-robot_pose[3][0])*(servo_cnt/300.0));
+        servo2.write(robot_pose[3][1]+(robot_pose[4][1]-robot_pose[3][1])*(servo_cnt/300.0));
+        servo3.write(robot_pose[3][2]+(robot_pose[4][2]-robot_pose[3][2])*(servo_cnt/300.0));
+        servo4.write(robot_pose[3][3]+(robot_pose[4][3]-robot_pose[3][3])*(servo_cnt/300.0));
+        servo_cnt++;
+
+        if(servo_cnt == 300){
+          //만약 완료되었다면  
+          task_counter++; //다음동작으로 이동
+          servo_cnt=0;
+        }
+      }else if(task_counter == 5){
+        //5번포즈 -> 6번포즈
+        servo1.write(robot_pose[4][0]+(robot_pose[5][0]-robot_pose[4][0])*(servo_cnt/300.0));
+        servo2.write(robot_pose[4][1]+(robot_pose[5][1]-robot_pose[4][1])*(servo_cnt/300.0));
+        servo3.write(robot_pose[4][2]+(robot_pose[5][2]-robot_pose[4][2])*(servo_cnt/300.0));
+        servo4.write(robot_pose[4][3]+(robot_pose[5][3]-robot_pose[4][3])*(servo_cnt/300.0));
+        servo_cnt++;
+
+        if(servo_cnt == 300){
+          //만약 완료되었다면  
+          task_counter++; //다음동작으로 이동
+          servo_cnt=0;
+        }
+      }else if(task_counter == 6){
+        //6번포즈 -> 기본포로
+        servo1.write(robot_pose[5][0]+(basic_pose[0]-robot_pose[5][0])*(servo_cnt/300.0));
+        servo2.write(robot_pose[5][1]+(basic_pose[1]-robot_pose[5][1])*(servo_cnt/300.0));
+        servo3.write(robot_pose[5][2]+(basic_pose[2]-robot_pose[5][2])*(servo_cnt/300.0));
+        servo4.write(robot_pose[5][3]+(basic_pose[3]-robot_pose[5][3])*(servo_cnt/300.0));
+        servo_cnt++;
+
+        if(servo_cnt == 300){
+          //만약 완료되었다면  
+          task_counter=0; //다음동작으로 이동
+          servo_cnt=0;
+        }
+      }
+      
+    }
+  }
+
+  //녹칸다에게 명령을 받아서 뭔가 한다
+  if(Serial.available()){
+    char c = Serial.read();
+    
+    //1번동작일때의 각도값 기억시키기
+    int analog1 = analogRead(A0);
+    int analog2 = analogRead(A1);
+    int analog3 = analogRead(A2);
+    int analog4 = analogRead(A3);
+    //아날로그 피드백값을 기준으로 각도값을 계산한다
+    int servo1_degree = map(analog1,577,85,0,180);
+    int servo2_degree = map(analog2,566,433,10,60);
+    int servo3_degree = map(analog3,535,218,15,130);
+    int servo4_degree = map(analog4,151,85,155,180);
+    //계산한 각도값이 0~180도 범위를 벗어나지 않도록 한다
+    servo1_degree = constrain(servo1_degree,0,180);
+    servo2_degree = constrain(servo2_degree,0,180);
+    servo3_degree = constrain(servo3_degree,0,180);
+    servo4_degree = constrain(servo4_degree,0,180); //집게
+
+    //불필요한데 집게를 강하게 잡게 하기 위해서 필요한부분
+    if(servo4_degree < 170){
+      servo4_degree = 155;
+    }
+    
+    if(c == '1'){
+      
+      //최종적으로 계산한 4개의 각도값을 전역변수로 기억시킨다
+      robot_pose[0][0] = servo1_degree;
+      robot_pose[0][1] = servo2_degree;
+      robot_pose[0][2] = servo3_degree;
+      robot_pose[0][3] = servo4_degree;
+
+      Serial.println("1번동작이 메모리되었습니다");
+      Serial.print(servo1_degree);
+      Serial.print(", ");
+      Serial.print(servo2_degree);
+      Serial.print(", ");
+      Serial.print(servo3_degree);
+      Serial.print(", ");
+      Serial.print(servo4_degree);
+      Serial.println();
+    }else if(c == '2'){
+      
+      //최종적으로 계산한 4개의 각도값을 전역변수로 기억시킨다
+      robot_pose[1][0] = servo1_degree;
+      robot_pose[1][1] = servo2_degree;
+      robot_pose[1][2] = servo3_degree;
+      robot_pose[1][3] = servo4_degree;
+
+      Serial.println("2번동작이 메모리되었습니다");
+      Serial.print(servo1_degree);
+      Serial.print(", ");
+      Serial.print(servo2_degree);
+      Serial.print(", ");
+      Serial.print(servo3_degree);
+      Serial.print(", ");
+      Serial.print(servo4_degree);
+      Serial.println();
+    }else if(c == '3'){
+      
+      //최종적으로 계산한 4개의 각도값을 전역변수로 기억시킨다
+      robot_pose[2][0] = servo1_degree;
+      robot_pose[2][1] = servo2_degree;
+      robot_pose[2][2] = servo3_degree;
+      robot_pose[2][3] = servo4_degree;
+
+      Serial.println("3번동작이 메모리되었습니다");
+      Serial.print(servo1_degree);
+      Serial.print(", ");
+      Serial.print(servo2_degree);
+      Serial.print(", ");
+      Serial.print(servo3_degree);
+      Serial.print(", ");
+      Serial.print(servo4_degree);
+      Serial.println();
+    }else if(c == '4'){
+      
+      //최종적으로 계산한 4개의 각도값을 전역변수로 기억시킨다
+      robot_pose[3][0] = servo1_degree;
+      robot_pose[3][1] = servo2_degree;
+      robot_pose[3][2] = servo3_degree;
+      robot_pose[3][3] = servo4_degree;
+
+      Serial.println("4번동작이 메모리되었습니다");
+      Serial.print(servo1_degree);
+      Serial.print(", ");
+      Serial.print(servo2_degree);
+      Serial.print(", ");
+      Serial.print(servo3_degree);
+      Serial.print(", ");
+      Serial.print(servo4_degree);
+      Serial.println();
+    }else if(c == '5'){
+      
+      //최종적으로 계산한 4개의 각도값을 전역변수로 기억시킨다
+      robot_pose[4][0] = servo1_degree;
+      robot_pose[4][1] = servo2_degree;
+      robot_pose[4][2] = servo3_degree;
+      robot_pose[4][3] = servo4_degree;
+
+      Serial.println("5번동작이 메모리되었습니다");
+      Serial.print(servo1_degree);
+      Serial.print(", ");
+      Serial.print(servo2_degree);
+      Serial.print(", ");
+      Serial.print(servo3_degree);
+      Serial.print(", ");
+      Serial.print(servo4_degree);
+      Serial.println();
+    }else if(c == '6'){
+      
+      //최종적으로 계산한 4개의 각도값을 전역변수로 기억시킨다
+      robot_pose[5][0] = servo1_degree;
+      robot_pose[5][1] = servo2_degree;
+      robot_pose[5][2] = servo3_degree;
+      robot_pose[5][3] = servo4_degree;
+
+      Serial.println("6번동작이 메모리되었습니다");
+      Serial.print(servo1_degree);
+      Serial.print(", ");
+      Serial.print(servo2_degree);
+      Serial.print(", ");
+      Serial.print(servo3_degree);
+      Serial.print(", ");
+      Serial.print(servo4_degree);
+      Serial.println();
+    }else if(c == 'S'){
+      set_center();
+      task_counter = 0;
+      task_run = true;
+      servo1.attach(9);
+      servo2.attach(10);
+      servo3.attach(11);
+      servo4.attach(12);
+    }else if(c == 'E'){
+      //작업즉시중지
+      task_run = false;
+      set_center();
+    }else if(c == 'C'){
+      //원점복귀
+      set_center();
+    }
+  }
+}
+
+void set_center(){
+  //원점으로 복귀한다
+  servo1.attach(9);
+  servo2.attach(10);
+  servo3.attach(11);
+  servo4.attach(12);
+
+  int analog1 = analogRead(A0);
+  int analog2 = analogRead(A1);
+  int analog3 = analogRead(A2);
+  int analog4 = analogRead(A3);
+  //아날로그 피드백값을 기준으로 각도값을 계산한다
+  int servo1_degree = map(analog1,577,85,0,180);
+  int servo2_degree = map(analog2,566,433,10,60);
+  int servo3_degree = map(analog3,535,218,15,130);
+  int servo4_degree = map(analog4,151,85,155,180);
+
+  Serial.println("현재위치");
+  Serial.print(servo1_degree);
+  Serial.print(", ");
+  Serial.print(servo2_degree);
+  Serial.print(", ");
+  Serial.print(servo3_degree);
+  Serial.print(", ");
+  Serial.print(servo4_degree);
+  Serial.println();
+
+  for(int i = 0;i<300;i++){
+    servo1.write(servo1_degree+(basic_pose[0]-servo1_degree)*(i/300.0));
+    servo2.write(servo2_degree+(basic_pose[1]-servo2_degree)*(i/300.0));
+    servo3.write(servo3_degree+(basic_pose[2]-servo3_degree)*(i/300.0));
+    servo4.write(servo4_degree+(basic_pose[3]-servo4_degree)*(i/300.0));
+    delay(5);
+  }
+
+  servo1.detach();
+  servo2.detach();
+  servo3.detach();
+  servo4.detach();
+}
+
+
+
+
+
+
