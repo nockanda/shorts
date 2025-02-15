@@ -1,0 +1,164 @@
+#include <Encoder.h>
+
+Encoder wheelLeft(2, 4); //모터1
+Encoder wheelRight(3, 5); //모터2
+
+long positionLeft  = 0;
+long positionRight = 0;
+
+#define ENA 6 //아날로그출력
+#define IN1 7 //디지털출력
+#define IN2 8 //디지털출력
+#define IN3 9 //디지털출력
+#define IN4 10 //디지털출력
+#define ENB 11 //아날로그출력
+
+//이 예제에서는 속도는 항상 최대로 한다!
+
+//IN3이 LOW고 IN4가 HIGH일때 정회전(시계방향)
+//IN3이 HIGH고 IN4가 LOW일때 역회전(반시계방향)
+//IN3과 IN4가 모두 LOW일때 break
+
+unsigned long t = 0;
+unsigned long t2 = 0;
+
+int state = 0;
+int left_pwm = 0;
+int right_pwm = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(IN1,OUTPUT); //모터1
+  pinMode(IN2,OUTPUT); //모터1
+  pinMode(IN3,OUTPUT); //모터2
+  pinMode(IN4,OUTPUT); //모터2
+}
+
+void loop() {
+  if(millis() - t2 > 10){
+    t2 = millis();
+    //모터제어를 전담하는 부분
+    if(left_pwm > 0){
+      //전진(0~255)
+      digitalWrite(IN1,LOW);
+      digitalWrite(IN2,HIGH);
+      analogWrite(ENA,left_pwm);
+    }else if(left_pwm < 0){
+      //후진(-255~0)
+      digitalWrite(IN1,HIGH);
+      digitalWrite(IN2,LOW);
+      analogWrite(ENA,abs(left_pwm));
+    }
+    if(right_pwm > 0){
+      //전진
+      digitalWrite(IN3,LOW);
+      digitalWrite(IN4,HIGH);
+      analogWrite(ENB,right_pwm);
+    }else if(right_pwm < 0) {
+      //후진
+      digitalWrite(IN3,HIGH);
+      digitalWrite(IN4,LOW);
+      analogWrite(ENB,abs(right_pwm));
+    }
+    //조이스틱 판정부분
+    int x = analogRead(A0);
+    int y = analogRead(A1);
+    if(x > 900){
+      right_pwm++;
+      left_pwm--;
+      if(right_pwm > 255) right_pwm = 255;
+      if(left_pwm < -255) left_pwm = -255;
+    }else if(x < 300){
+      state = 4;
+      right_pwm--;
+      left_pwm++;
+      if(right_pwm < -255) right_pwm = -255;
+      if(left_pwm > 255) left_pwm = 255;
+    }else if(y > 700){
+      right_pwm--;
+      left_pwm--;
+      if(right_pwm < -255) right_pwm = -255;
+      if(left_pwm < -255) left_pwm = -255;
+    }else if(y < 300){
+      right_pwm++;
+      left_pwm++;
+      if(right_pwm > 255) right_pwm = 255;
+      if(left_pwm > 255) left_pwm = 255;
+    }else{
+      //어디 있든간 0으로 수렴해야한다
+      if(right_pwm > 0){
+        right_pwm--;
+      }else if(right_pwm < 0){
+        right_pwm++;
+      }
+
+      if(left_pwm > 0){
+        left_pwm--;
+      }else if(left_pwm < 0){
+        left_pwm++;
+      }
+    }
+  }
+  
+  //0.1초 간격을 생성한다!
+  if(millis() - t > 100){
+    t = millis();    
+    
+    //현재 엔코더량을 가져온다
+    long newLeft = wheelLeft.read();
+    long newRight = wheelRight.read();
+
+    float leftRPM = (newLeft*-1) * 600 / 900.0;
+    float rightRPM = newRight * 600 / 900.0;
+
+    Serial.print(leftRPM);
+    Serial.print(",");
+    Serial.print(rightRPM);
+    Serial.println();
+
+    //계산할거 다하고 현재 엔코더량을 초기화한다
+    wheelLeft.write(0);
+    wheelRight.write(0);
+  }
+}
+
+void nockanda_left(){
+  //모터1번은 시계방향회전 모터2번은 시계방향회전
+  digitalWrite(IN1,HIGH);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,LOW);
+  digitalWrite(IN4,HIGH);
+}
+void nockanda_right(){
+  //모터1번은 시계방향회전 모터2번은 시계방향회전
+  digitalWrite(IN1,LOW);
+  digitalWrite(IN2,HIGH);
+  digitalWrite(IN3,HIGH);
+  digitalWrite(IN4,LOW);
+}
+void nockanda_go(){
+  //모터1번은 반시계방향회전 모터2번은 시계방향회전
+  digitalWrite(IN1,LOW);
+  digitalWrite(IN2,HIGH);
+  digitalWrite(IN3,LOW);
+  digitalWrite(IN4,HIGH);
+}
+void nockanda_back(){
+  //모터1번은 시계방향회전 모터2번은 반시계방향회전
+  digitalWrite(IN1,HIGH);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,HIGH);
+  digitalWrite(IN4,LOW);
+}
+void nockanda_break(){
+  digitalWrite(IN1,LOW);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,LOW);
+  digitalWrite(IN4,LOW);
+}
+
+
+
+
+
+
