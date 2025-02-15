@@ -1,0 +1,96 @@
+#include <Encoder.h>
+Encoder wheelLeft(2, 4); //모터1
+Encoder wheelRight(3, 5); //모터2
+
+long positionLeft  = 0;
+long positionRight = 0;
+
+#define ENA 6 //아날로그출력
+#define IN1 7 //디지털출력
+#define IN2 8 //디지털출력
+#define IN3 9 //디지털출력
+#define IN4 10 //디지털출력
+#define ENB 11 //아날로그출력
+
+//이 예제에서는 속도는 항상 최대로 한다!
+
+//IN3이 LOW고 IN4가 HIGH일때 정회전(시계방향)
+//IN3이 HIGH고 IN4가 LOW일때 역회전(반시계방향)
+//IN3과 IN4가 모두 LOW일때 break
+
+unsigned long t = 0;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(IN1,OUTPUT); //모터1
+  pinMode(IN2,OUTPUT); //모터1
+  pinMode(IN3,OUTPUT); //모터2
+  pinMode(IN4,OUTPUT); //모터2
+
+  //모터1과 모터2는 항상 최대로 회전한다(속도제어 안함)
+  analogWrite(ENA, 255);
+  analogWrite(ENB, 255);
+}
+
+void loop() {
+  //시리얼입력으로 뭔가 제어되는 부분
+  if(Serial.available()){
+    char c = Serial.read(); //문자1개 읽겠다!
+    if(c == '0'){
+      //정지
+      nockanda_break();
+    }else if(c == '1'){
+      //정회전
+      nockanda_go();
+    }else if(c == '2'){
+      //역회전
+      nockanda_back();
+    }
+  }
+
+  //0.1초 간격을 생성한다!
+  if(millis() - t > 100){
+    t = millis();
+    //현재 엔코더량을 가져온다
+    long newLeft = wheelLeft.read();
+    long newRight = wheelRight.read();
+
+    float leftRPM = (newLeft*-1) * 600 / 900.0;
+    float rightRPM = newRight * 600 / 900.0;
+
+    Serial.print(leftRPM);
+    Serial.print(",");
+    Serial.print(rightRPM);
+    Serial.println();
+
+    //계산할거 다하고 현재 엔코더량을 초기화한다
+    wheelLeft.write(0);
+    wheelRight.write(0);
+  }
+}
+
+void nockanda_go(){
+  //모터1번은 반시계방향회전 모터2번은 시계방향회전
+  digitalWrite(IN1,LOW);
+  digitalWrite(IN2,HIGH);
+  digitalWrite(IN3,LOW);
+  digitalWrite(IN4,HIGH);
+}
+void nockanda_back(){
+  //모터1번은 시계방향회전 모터2번은 반시계방향회전
+  digitalWrite(IN1,HIGH);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,HIGH);
+  digitalWrite(IN4,LOW);
+}
+void nockanda_break(){
+  digitalWrite(IN1,LOW);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,LOW);
+  digitalWrite(IN4,LOW);
+}
+
+
+
+
+
