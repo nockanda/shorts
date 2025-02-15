@@ -1,0 +1,53 @@
+1.Horizontal tab : 현위치에서 tap간격만큼 띄운다!
+    \t == 0x09 == 9
+2.Print and line feed : 현재 수신버퍼에 있는 내용을 영수증프린터에 출력을 해라!
+   \n == 0x0a == 10
+3.Print and carriage return : 현재 수신버퍼에 있는 내용을 영수증프린터에 출력을 해라!
+   \r == 0x0d == 13
+4.Partial cut : 영수증을 절단하는 명령
+   27, 105
+   27, 109
+5.Print and feed n lines : 영수증을 n라인만큼 feed하는 명령!
+   27, 100, 5 : 영수증을 5줄만큼 위쪽으로 feed(0 ≤ n ≤ 255)
+6.Set absolute print position : 한줄을 프린트할때 글자가 프린트되어야할 위치를 지정한다
+   27, 36, nL, nH
+   27, 36, 128, 0 : 128위치에 프린트할경우
+   27, 36, 144, 1 : 400위치에 프린트할경우
+   27, 36, 32, 3 : 800위치에 프린트할경우
+7.Turn underline mode on/off : 출력할 text에 밑줄을 긋는다
+   27, 45, 0 : 기능해제
+   27, 45, 1 : 연하게
+   27, 45, 2 : 진하게
+8.Initialize printer : 영수증 프린터 수신버퍼 내용을 지운다!
+   27, 64
+9.Turn emphasized mode on / off : 볼트체를 적용한다
+   27, 69, 0 : 해제
+   27, 69, 1 : 설정
+10.Set position alignment : 글자를 정렬한다
+   27, 97, 0 : 왼쪽정렬
+   27, 97, 1 : 가운데정렬
+   27, 97, 2 : 오른쪽정렬
+11.Turns white/black reverse printing mode on / off : 흑백반전
+   29, 66, 0 : 해제
+   29, 66, 1 : 설정
+12.Set left margin : 왼쪽 공백영역을 설정한다
+   29, 76, nL, nH 
+   29, 76, 0, 0 : 기본 마진
+   29, 76, 128, 0 : 128위치까지를 마진으로설정
+   29, 76, 144, 1 : 400위치까지를 마진으로설정
+   29, 76, 32, 3 : 800위치까지를 마진으로설정
+13.Set printing area width : 콘텐츠가 출력될 영역의 너비
+   29, 87, nL, nH
+   29, 87, 0, 2 : 기본 너비
+14.Selects bar code height : 바코드의 height를 설정한다!
+   29, 104, n (1 ≤ n ≤ 255)
+   29, 104, 162 : 기본 바코드의 높이
+15.Print bar code : 바코드를 프린트한다
+   29, 107, 2, "2000000203409", 0 : EAN-13바코드 형태
+16.Set bar code width : 바코드의 width를 설정한다!
+   29 119 n (2 ≤ n ≤ 6)
+
+
+
+
+
