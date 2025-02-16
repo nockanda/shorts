@@ -1,0 +1,95 @@
+//슬레이브(SLAVE)
+
+#include <ACAN_ESP32.h>
+
+#define slave_id 0x123
+#define myled 18
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(myled,OUTPUT);
+  ACAN_ESP32_Settings settings(125000UL);
+
+  //settings.mRequestedCANMode = ACAN_ESP32_Settings::LoopBackMode;
+  
+  //Default Tx:GPIO4, Rx:GPIO5
+  settings.mRxPin = GPIO_NUM_17;
+  settings.mTxPin = GPIO_NUM_16;
+
+  const uint32_t ret = ACAN_ESP32::can.begin(settings) ;
+  
+  if (ret == 0) {    
+    Serial.print("Bit Rate prescaler: ") ;
+    Serial.println(settings.mBitRatePrescaler) ;
+    Serial.print("Time Segment 1:     ") ;
+    Serial.println(settings.mTimeSegment1) ;
+    Serial.print("Time Segment 2:     ") ;
+    Serial.println(settings.mTimeSegment2) ;
+    Serial.print("RJW:                ") ;
+    Serial.println(settings.mRJW) ;
+    Serial.print("Triple Sampling:    ") ;
+    Serial.println(settings.mTripleSampling ? "yes" : "no") ;
+    Serial.print("Actual bit rate:    ") ;
+    Serial.print(settings.actualBitRate ()) ;
+    Serial.println(" bit/s") ;
+    Serial.print("Exact bit rate ?    ") ;
+    Serial.println(settings.exactBitRate () ? "yes" : "no") ;
+    Serial.print("Distance            ") ;
+    Serial.print(settings.ppmFromDesiredBitRate ()) ;
+    Serial.println(" ppm") ;
+    Serial.print("Sample point:       ") ;
+    Serial.print(settings.samplePointFromBitStart ()) ;
+    Serial.println("%") ;
+    Serial.println("Configuration OK!");
+  } else {
+    Serial.print("Configuration error 0x") ;
+    Serial.println(ret, HEX) ;    
+  }
+}
+
+void loop() {
+  CANMessage txframe;
+  CANMessage rxframe;
+
+  //캔통신으로 수신된 데이터가 있는가?
+  if(ACAN_ESP32::can.receive(rxframe)) {
+    //결과를 16진수로출력
+    Serial.print("REQUEST : ");
+    for(int i = 0;i<rxframe.len;i++){
+      Serial.print(rxframe.data[i],HEX);
+      //Serial.print((char)rxframe.data[i]);
+      Serial.print(", ");
+    }
+    Serial.println();
+
+    //마스터가 보낸 request의 id가 내것이면 응답하고 아니면 응답하지 않는다
+    if(rxframe.id == slave_id){
+      //마스터가 보낸 데이터의 첫번째 바이트가 0이면 OFF고 1이면 ON이다
+      if(rxframe.data[0] == 0x00){
+        digitalWrite(myled,LOW); //OFF
+      }else if(rxframe.data[0] == 0x01){
+        digitalWrite(myled,HIGH); //ON
+      }
+      
+      //응답한다
+      txframe.id = slave_id;
+      txframe.rtr = 0; //확실히 이게 무슨 기능을 하는지는 모르겠음!
+      txframe.len = 8; //내가 보낼 데이터의 길이
+      
+      txframe.data[0] = digitalRead(myled); //현재 LED의 상태
+      txframe.data[1] = 0x00;
+      txframe.data[2] = 0x00;
+      txframe.data[3] = 0x00;
+      txframe.data[4] = 0x00;
+      txframe.data[5] = 0x00;
+      txframe.data[6] = 0x00;
+      txframe.data[7] = 0x00;
+      
+      //전송
+      if (ACAN_ESP32::can.tryToSend(txframe)) {
+        //성공 
+        Serial.println("전송에 성공했습니다");
+      }   
+    }
+  }  
+}
