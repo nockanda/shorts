@@ -1,0 +1,139 @@
+//마스터(master)
+
+//라이브러리
+#include <ACAN_ESP32.h>
+
+union{
+  float input;
+  byte output[4];
+}myunion;
+
+//1초라는 타이밍을 생성하기 위한 시간을 담는 변수
+unsigned long t = 0;
+
+void setup() {
+  Serial.begin(115200); //나 컴퓨터와 USB로 통신할거야!
+  //캔통신의 통신속도를 결정하는 부분
+  //125k(125000UL), 250k(250000UL), 500k(500000UL)
+  ACAN_ESP32_Settings settings(125000UL); //125k
+
+  //실제로 통신할거기 때문에 루프백모드를 설정하면 안된다
+  //settings.mRequestedCANMode = ACAN_ESP32_Settings::LoopBackMode;
+  
+  //Default Tx:GPIO4, Rx:GPIO5
+  settings.mRxPin = GPIO_NUM_17; //TX2
+  settings.mTxPin = GPIO_NUM_16; //RX2
+
+  //통신속도와 연결핀을 기준으로 캔통신 초기화
+  const uint32_t ret = ACAN_ESP32::can.begin(settings) ;
+
+  //ESP32에 설정된 캔통신 파라미터가 ~~~게 되었다라는것을 단순 프린트해준다!
+  if (ret == 0) {    
+    Serial.print("Bit Rate prescaler: ") ;
+    Serial.println(settings.mBitRatePrescaler) ;
+    Serial.print("Time Segment 1:     ") ;
+    Serial.println(settings.mTimeSegment1) ;
+    Serial.print("Time Segment 2:     ") ;
+    Serial.println(settings.mTimeSegment2) ;
+    Serial.print("RJW:                ") ;
+    Serial.println(settings.mRJW) ;
+    Serial.print("Triple Sampling:    ") ;
+    Serial.println(settings.mTripleSampling ? "yes" : "no") ;
+    Serial.print("Actual bit rate:    ") ;
+    Serial.print(settings.actualBitRate ()) ;
+    Serial.println(" bit/s") ;
+    Serial.print("Exact bit rate ?    ") ;
+    Serial.println(settings.exactBitRate () ? "yes" : "no") ;
+    Serial.print("Distance            ") ;
+    Serial.print(settings.ppmFromDesiredBitRate ()) ;
+    Serial.println(" ppm") ;
+    Serial.print("Sample point:       ") ;
+    Serial.print(settings.samplePointFromBitStart ()) ;
+    Serial.println("%") ;
+    Serial.println("Configuration OK!");
+  } else {
+    Serial.print("Configuration error 0x") ;
+    Serial.println(ret, HEX) ;    
+  }
+}
+
+void loop() {
+  //이거는 하나 필요함!
+  CANMessage txframe;
+  CANMessage rxframe;
+
+  //1.마스터가 슬레이브에게 request를 전송한다
+  txframe.id = 0x123;
+  txframe.rtr = 0; //확실히 이게 무슨 기능을 하는지는 모르겠음!
+  txframe.len = 8; //내가 보낼 데이터의 길이
+
+  txframe.data[0] = 0x00;
+  txframe.data[1] = 0x00;
+  txframe.data[2] = 0x00;
+  txframe.data[3] = 0x00;
+  txframe.data[4] = 0x00;
+  txframe.data[5] = 0x00;
+  txframe.data[6] = 0x00;
+  txframe.data[7] = 0x00;
+
+  //전송
+  if (ACAN_ESP32::can.tryToSend(txframe)) {
+    //성공 
+    Serial.println("전송에 성공했습니다");
+  }   
+  //2.수신데이터가 있을때까지 기다린다(블록킹)
+  unsigned long time_t = millis(); //현재 타이머 카운터
+  bool is_timeout = false;
+  while(true){
+    //아무리 기다려도 응답이 안올 수 있다
+    if(millis() - time_t > 100){
+      //무한루프가 시작된지 0.1초가 지났다
+      //request를 전송한다음 0.1초가 지났다!
+      is_timeout = true;
+      break;
+    }
+    //무한루프를 돌리면서 응답이 올때까지 기다린다
+    if(ACAN_ESP32::can.receive(rxframe)){
+      //응답이 온 상황
+      break;
+    }
+    
+  }
+  
+  //3.언제까지 기다려야하나요? -> 타임아웃처리
+  if(is_timeout){
+    //타임아웃이 발생한경우
+    Serial.println("타임아웃이 발생했습니다!");
+  }else{
+    
+    myunion.output[0] = rxframe.data[0];
+    myunion.output[1] = rxframe.data[1];
+    myunion.output[2] = rxframe.data[2];
+    myunion.output[3] = rxframe.data[3];
+    float sensor1 = myunion.input;
+    myunion.output[0] = rxframe.data[4];
+    myunion.output[1] = rxframe.data[5];
+    myunion.output[2] = rxframe.data[6];
+    myunion.output[3] = rxframe.data[7];
+    float sensor2 = myunion.input;
+
+    Serial.print("온도 = ");
+    Serial.print(sensor1);
+    Serial.print("'C, 습도 = ");
+    Serial.print(sensor2);
+    Serial.println("%");
+    
+    //정상적으로 종료된 경우
+    //4.응답이 정상으로 도달했다면 해석해서 출력한다!
+    Serial.print("RESPONSE : ");
+    for(int i = 0;i<rxframe.len;i++){
+      Serial.print(rxframe.data[i],HEX);
+      //Serial.print((char)rxframe.data[i]);
+      Serial.print(", ");
+    }
+    Serial.println();  
+  }
+  
+  delay(1000);
+  
+}
