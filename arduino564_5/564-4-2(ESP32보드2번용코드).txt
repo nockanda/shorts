@@ -1,0 +1,138 @@
+#define ENABLE_GxEPD2_GFX 0
+
+//3컬러 e-paper이다!
+#include <GxEPD2_3C.h>
+
+//ESP32가 WiFi를 사용하도록 하는 라이브러리
+#include <WiFi.h>
+
+//공유기의 ID와 PW를 입력할것!
+const char* ssid     = "nockanda";
+const char* password = "11213144";
+
+WiFiServer server(60000); //몇번 포트로 TCP서버를 열것인가?(0~65535)
+
+//#include "bitmaps/nockanda3.h" // 2.9"  b/w/r
+GxEPD2_3C<GxEPD2_290_Z13c, GxEPD2_290_Z13c::HEIGHT> display(GxEPD2_290_Z13c(/*CS=5*/ 5, /*DC=*/ 17, /*RST=*/ 16, /*BUSY=*/ 4)); // GDEH029Z13 128x296, UC8151D
+
+byte black_img[4736];
+byte color_img[4736];
+
+//검정색과 컬러부분을 구조체로 만듬!(편하게 쓸려고 만듬)
+struct bitmap_pair
+{
+  const unsigned char* black;
+  const unsigned char* red;
+};
+
+void setup()
+{
+  Serial.begin(115200); //PC와 USB로 통신하겠다!
+  Serial.println();
+  Serial.println("setup");
+  delay(100);
+  display.init(115200, true, 2, false);
+
+  //여기서부터
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+ 
+  IPAddress ip (192, 168, 0, 61); //내가 원하는 IP
+  IPAddress gateway (192, 168, 0, 1);
+  IPAddress subnet (255, 255, 255, 0);
+
+  WiFi.config (ip, gateway, subnet); //내가 원하는 설정 반영
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+  }
+  //여기까지 WiFi접속하는 구문!
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP()); //인터넷공유기로 부터 발급받은 IP주소가 출력됨!
+
+  //TCP서버 열기!
+  server.begin();
+  
+  /*
+  //E-paper에 이미지 출력하는 코드
+  display.setFullWindow();
+  drawBitmaps3c128x296();
+  display.powerOff();
+  */
+}
+
+void loop()
+{
+  WiFiClient client = server.available();   //클라이언트의 접속을 기다린다!
+
+  if (client) {   
+    //클라이언트의 접속이 감지되었다!
+    Serial.println("새로운 클라이언트의 등장!");
+    String currentLine = ""; 
+
+    //client.connected() : 클라이언트가 서버에 접속중인가?
+    //client.available() : 클라이언트가 전송한 데이터가 버퍼에 쌓이는데 몇개인가?
+    while (client.connected()) {
+      if (client.available()) { 
+        //클라이언트가 서버로 데이터를 전송한게 있다!
+        //그 데이터를 버퍼에서 빼서 변수로 옮긴다!(혹은 출력한다)
+        Serial.println("데이터 수신");
+        client.readBytes(black_img,4736); //검정수신
+        client.readBytes(color_img,4736); //컬러수신
+        Serial.println("E-paper수정작업시작!");
+        display.setFullWindow();
+        drawBitmaps3c128x296();
+        display.powerOff();
+        Serial.println("E-paper수정작업종료!");
+      }
+    }
+    // close the connection:
+    client.stop();
+    Serial.println("클라이언트와 접속이 끊어졌습니다!");
+  }
+  
+  if(Serial.available()){
+    //PC에서 USB로 전송한게 있다!
+    //검정4736바이트와 컬러4736바이트를 PC에서 수신해야한다!
+    Serial.println("데이터 수신");
+    Serial.readBytes(black_img,4736); //검정수신
+    Serial.readBytes(color_img,4736); //컬러수신
+    Serial.println("E-paper수정작업시작!");
+    display.setFullWindow();
+    drawBitmaps3c128x296();
+    display.powerOff();
+    Serial.println("E-paper수정작업종료!");
+  }
+}
+
+void drawBitmaps3c128x296()
+{
+  bitmap_pair bitmap_pairs = {black_img, color_img};
+
+  //아래부분은 E-paper에 이미지를 드로잉하는 과정으로 우리가 손댈부분이 전혀없음!
+  if ((display.epd2.WIDTH == 128) && (display.epd2.HEIGHT == 296) && display.epd2.hasColor)
+  {
+    display.firstPage();
+    do
+    {
+      display.fillScreen(GxEPD_WHITE);
+      display.drawInvertedBitmap(0, 0, bitmap_pairs.black, 128, 296, GxEPD_BLACK);
+      display.drawInvertedBitmap(0, 0, bitmap_pairs.red, 128, 296, GxEPD_RED);
+      /*
+      if (bitmap_pairs.red == WS_Bitmap3c128x296_red)
+      {
+        display.drawInvertedBitmap(0, 0, bitmap_pairs.red, 128, 296, GxEPD_RED);
+      }
+      else display.drawBitmap(0, 0, bitmap_pairs.red, 128, 296, GxEPD_RED);
+      */
+    }
+    while (display.nextPage());
+  }
+}
