@@ -1,0 +1,39 @@
+#include <Servo.h>
+
+#define start_btn 2
+#define end_btn 3
+
+Servo ESC;
+
+bool is_run = false;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(start_btn,INPUT_PULLUP);
+  pinMode(end_btn,INPUT_PULLUP);
+  //9번핀에 ESC가 연결되어있다!
+  ESC.attach(9,1000,2000);
+  ESC.write(0); //0~180
+  delay(2000); //ESC가 켜질때까지 약간 기다려주기!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  //버튼을 눌렀으면서도 현재 시동이 꺼져있을때 켠다!
+  if(digitalRead(start_btn) == LOW && is_run == false){
+    ESC.write(10);
+    is_run = true;
+  }
+  if(digitalRead(end_btn) == LOW && is_run == true){
+    ESC.write(0);
+    is_run = false;
+  }
+  
+  if(is_run){
+     int power = analogRead(A0); //10비트 아날로그!(0~1023) -> 0~60
+     power = map(power,0,1023,0,60);
+     if(power < 10) power = 10;
+     ESC.write(power);
+  }
+}
