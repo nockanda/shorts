@@ -1,0 +1,43 @@
+#include <RBDdimmer.h>
+
+#define outputPin  3 
+#define zerocross  2
+
+//dimmerLamp dimmer(outputPin, zerocross);
+dimmerLamp dimmer(outputPin);
+
+
+int old_value = 0;
+
+void setup() {
+  Serial.begin(9600);
+  dimmer.begin(NORMAL_MODE, OFF); //모드와 시작할때 상태가 무엇인가?
+
+  old_value = map(analogRead(A0),0,1023,20,100);
+}
+
+
+void loop() {
+  //Serial.println(dimmer.getPower());
+  //dimmer.setState(ON); 
+  //dimmer.setPower(outVal);
+
+  int value = analogRead(A0); //0~1023
+  value = map(value,0,1023,20,100); //20~100
+  //dimmer.setPower(value);
+  //값의 변화가 있을때만 업데이트 하겠다!
+  if(old_value != value){
+    if(value == 20){
+      //끄세요!
+      dimmer.setState(OFF); 
+    }else{
+      //제어하세요!
+      dimmer.setState(ON); 
+      dimmer.setPower(value);
+    }
+    Serial.print("설정된파워=");
+    Serial.println(dimmer.getPower());
+  }
+  old_value = value;
+  delay(20);
+}
