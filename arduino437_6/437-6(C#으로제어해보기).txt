@@ -1,0 +1,81 @@
+#include "DHT.h"
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
+
+LiquidCrystal_I2C lcd(0x27,16,2); //2004 -> 1602
+
+#define DHTPIN 5
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+#define mosfet 2
+#define btn_on 3
+#define btn_off 4
+
+int humi_min = 45;
+int humi_max = 48;
+
+unsigned long t = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(9600); //아두이노의 결과를 PC에 출력하겠다!
+  dht.begin();
+  lcd.init();
+  lcd.backlight();
+  pinMode(mosfet,OUTPUT); //모스펫핀을 출력으로 설정!
+  pinMode(btn_on,INPUT_PULLUP); //아두이노에 내장된 저항을 이용해서 버튼을 활용하겠다!
+  pinMode(btn_off,INPUT_PULLUP); //아두이노에 내장된 저항을 이용해서 버튼을 활용하겠다!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if(digitalRead(btn_on) == LOW){
+    //버튼이 눌려진것!
+    digitalWrite(mosfet,HIGH);
+  }
+  if(digitalRead(btn_off) == LOW){
+    //버튼이 눌려진것!
+    digitalWrite(mosfet,LOW);
+  }
+
+  //시리얼입력으로 가습기를 on/off해보자
+  if(Serial.available()){
+    char c = Serial.read();
+    if(c == '0'){
+      //끈다
+      digitalWrite(mosfet,LOW);
+    }else if(c == '1'){
+      //켠다
+      digitalWrite(mosfet,HIGH);
+    }
+  }
+  
+
+  if(millis() - t > 1000){
+    t = millis();
+    //1초에 한번 온도와 습도를 측정하세요!
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    //현재 가습기가 작동중이냐?
+    byte state = digitalRead(mosfet); //HIGH=ON, LOW=OFF
+    Serial.print(state);
+    Serial.print(",");
+    Serial.print(h);
+    Serial.print(",");
+    Serial.println(t);
+
+
+    lcd.setCursor(0,0); //첫번째줄~
+    lcd.print("HUMI=");
+    lcd.print(h);
+    lcd.print("%  ");
+    lcd.setCursor(0,1); //두번째줄~
+    lcd.print("TEMP=");
+    lcd.print(t);
+    lcd.print("'C  ");
+  }
+
+  
+}
