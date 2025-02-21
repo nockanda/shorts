@@ -1,0 +1,257 @@
+#include <WiFi.h>
+#include "DHT.h"
+
+#define DHTPIN 15
+#define DHTTYPE DHT11
+
+#ifndef STASSID
+#define STASSID "nockanda" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "11213144" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+// Create an instance of the server
+// specify the port to listen on as an argument
+WiFiServer server(80);
+DHT dht(DHTPIN, DHTTYPE);
+
+float ts[7] ={0};
+float hs[7] ={0};
+
+void setup() {
+  Serial.begin(115200);
+
+  // Connect to WiFi network(그냥 한번 출력해보는거)
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //와이파이 접속
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  // Start the server
+  server.begin();
+  Serial.println(F("Server started"));
+  dht.begin();
+  // Print the IP address
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  // Check if a client has connected
+  WiFiClient client = server.available();
+  if (!client) {
+    return;
+  }
+  Serial.println(F("new client"));
+
+  client.setTimeout(5000); // default is 1000
+
+  //데이터 측정 및 자바스크립트 코드(string)로 전환
+  float h = dht.readHumidity(); //습도
+  float t = dht.readTemperature(); //온도
+  //ts[0]~ts[6] :총 7개
+  //최근값은 ts[6]에 채우고 나머지값은 하나씩 왼쪽으로 옮긴다
+  //0(1) 1(2) 2(3) 3(4) 4(5) 5(6)
+  for(int i =0;i<6;i++){
+    ts[i] = ts[i+1];
+    hs[i] = hs[i+1];
+  }
+  ts[6] = t;
+  hs[6] = h;
+
+  String ts2string;
+  String hs2string;
+  for(int i = 0;i<7;i++){
+    ts2string += String(ts[i]);
+    hs2string += String(hs[i]);
+    if(i != 6){
+      ts2string += ","; 
+      hs2string += ",";
+    }
+  }
+
+  //클라이언트가 보낸 request는 큰의미가 없으므로 날려버림
+  while (client.available()) {
+    client.read();
+  }
+
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n"));
+  
+  String response = "\
+  <head>\
+<title>NOCKANDA DHT11 EXAMPLE</title>\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script type=\"text/javascript\" charset=\"utf-8\" src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js\"></script>\
+<style>\
+#btn{\
+border: 1px solid blue;\
+background-color: rgba(0,0,0,0);\
+color: blue;\
+padding: 5px;\
+border-top-left-radius: 5px;\
+border-bottom-left-radius: 5px;\
+border-top-right-radius: 5px;\
+border-bottom-right-radius: 5px;\
+margin-right:-4px;\
+height:40px;\
+}\
+table {\
+border-collapse: collapse;\
+width:500px;\
+}\
+table, td, th {\
+border: solid 1px #cccccc;\
+}\
+tr {\
+height:40px;\
+text-align: center;\
+}\
+td, th {\
+padding: 5px;\
+}\
+.set1 {\
+background-color: red;\
+color: white;\
+text-decoration: underline;\
+font-weight: bold;\
+}\
+#c_head {\
+height:30px;\
+background-color: #eeeeee;\
+}\
+#c_width{\
+width: 500px;\
+}\
+</style>\
+</head>\
+<body>\
+<h1>NOCKANDA DHT11 SENSOR EXAMPLE!</h1>\
+<table>\
+<tr id=\"c_head\"><th>Temperature</th><th>Huminity</th></tr>\
+<tr id=\"c_head\">\
+   <th>\
+     <div style=\"width:250px; height:200px;\">\
+       <canvas id=\"donut1\"></canvas>\
+     </div>\
+    </th>\
+   <th>\
+     <div style=\"width:250px; height:200px;\">\
+       <canvas id=\"donut2\"></canvas>\
+     </div>\
+    </th>\
+</tr><tr><td colspan=2>\
+<div style=\"width:500px;\">\
+<canvas id=\"line1\"></canvas>\
+</div>\
+</td></tr><tr><td colspan=2 align=center>\
+<button id=\"btn\" onclick=\"location.href=window.location.href\">REFRESH</button>\
+</td></tr></table>\
+<script>\
+var t_value ="+ 
+String(t) 
++";\
+var t_color = \"red\";\
+var num = (t_value + 50)/100; \
+var data = { labels: [ \"Temperature\" ], datasets: [ { data: [num, 1-num], backgroundColor: [t_color ], hoverBackgroundColor: [t_color] }] }; \
+var ctx2 = document.getElementById('donut1').getContext('2d');\
+var chart2 = new Chart(ctx2, {\
+type: 'doughnut',\
+data: data,\
+options: {\ 
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx2.textAlign = 'center';\
+           ctx2.textBaseline = 'middle';\
+           ctx2.font = '50px Arial';\
+           ctx2.fillStyle = t_color;\
+           ctx2.fillText(t_value , chart2.width/2, chart2.height-70);\
+           ctx2.font = '20px Arial';\
+           ctx2.fillText(\"('C)\", chart2.width/2, chart2.height-40);\
+      }\
+   }, \
+   rotation: 1 * Math.PI, \
+   circumference: 1 * Math.PI } \
+});\
+var h_value = "+
+String(h)
++";\
+var h_color = \"green\";\
+var num2 = h_value/100; \
+var data2 = { labels: [ \"Huminity\" ], datasets: [ { data: [num2, 1-num2], backgroundColor: [ h_color ], hoverBackgroundColor: [ h_color] }] }; \
+var ctx3 = document.getElementById('donut2').getContext('2d');\
+var chart3 = new Chart(ctx3, {\
+type: 'doughnut',\
+data: data2,\
+options: { \
+   responsive: true, \
+   legend: { display: false }, \
+   elements: { center: { text: Math.round(num2*100), fontStyle: 'Helvetica', sidePadding: 15 } }, \
+   maintainAspectRatio : false, \
+   cutoutPercentage:70, \
+   animation: {\
+      onComplete: function () {\
+           ctx3.textAlign = 'center';\
+           ctx3.textBaseline = 'middle';\
+           ctx3.font = '50px Arial';\
+           ctx3.fillStyle = h_color;\
+           ctx3.fillText(h_value, chart3.width/2, chart3.height-70);\
+           ctx3.font = '20px Arial';\
+           ctx3.fillText(\"(%)\", chart3.width/2, chart3.height-40);\
+      }\
+   }, \
+   rotation: 1 * Math.PI, \
+   circumference: 1 * Math.PI } \
+});\
+var ctx = document.getElementById('line1').getContext('2d');\
+var chart = new Chart(ctx, {\
+type: 'line',\
+data: {\
+labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+datasets: [\
+{\
+label: 'Temperature',\
+backgroundColor: 'transparent',\
+borderColor: t_color,\
+data: ["+
+ts2string
++"]\
+},\
+{\
+label: 'Huminity',\
+backgroundColor: 'transparent',\
+borderColor: h_color,\
+data: ["+
+hs2string
++"]\
+}\
+]\
+},\
+options: {}\
+});\
+</script>\
+</body>\
+</html>\
+  ";
+
+  client.print(response);
+  Serial.println(F("Disconnecting from client"));
+}
