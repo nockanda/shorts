@@ -1,0 +1,92 @@
+//ESP32의 인터넷 공유기 접속과 관련된 라이브러리!
+#include <WiFi.h>
+
+#define led 15
+
+//나의 WiFi공유기 아이디 비밀번호
+const char* ssid     = "nockanda";
+const char* password = "11213144";
+
+//나의 ESP32의 80번포트를 웹서버 포트로 지정하겠다!
+WiFiServer server(80);
+
+void setup() {
+  //ESP32와 PC사이의 통신을 하겠다!
+  Serial.begin(115200);
+  pinMode(led,OUTPUT);
+  //단순출력구문
+  Serial.println();
+  Serial.println();
+  Serial.print(F("Connecting to "));
+  Serial.println(ssid);
+
+  //나의 ESP32를 WiFi공유기에 접속가능하도록 STA모드로 설정!
+  WiFi.mode(WIFI_STA);
+  //인터넷 공유기에 접속해라!
+  WiFi.begin(ssid, password);
+
+  //인터넷 공유기와 접속할때까지 무한루프
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(F("."));
+  }
+  Serial.println();
+  Serial.println(F("WiFi connected"));
+
+  //-----------------여기까지는 와이파이 연결하는 부분....
+
+  //웹서버 시작!
+  server.begin();
+  Serial.println(F("Server started"));
+
+  //인터넷 공유기로 부터 받은 IP주소를 출력한다!
+  Serial.println(WiFi.localIP());
+}
+
+void loop() {
+  //서버가 클리이언트의 접속을 기다린다(리스닝상태)
+  WiFiClient client = server.available();
+  //클라이언트가 서버에 접속되면 아래 조건문이 참이된다!
+  if (!client) {
+    return;
+  }
+  Serial.println(F("새로운 웹클라이언트가 접속을 했다!"));
+  //웹서버가 클라이언트가 보낸 request를 최대로 기다려주는 시간(5초)
+  client.setTimeout(5000);
+  //클라이언트가 서버쪽으로 request를 전송한다!
+  //그러므로 서버는 request를 수신해야한다!
+
+  //request받은 내용중에 첫번째줄만 따로 입력을 받겠다!
+  String request = client.readStringUntil('\n'); //첫줄만 읽어라!
+  Serial.print("첫번째줄 = ");
+  Serial.println(request);
+  //클라이언트가 전송한 request전문을 USB로연결된 PC로 전송하겠다!
+  while(client.available()){
+    Serial.write(client.read());
+  }
+
+  //내가 검색한 문장이 request안에 존재하느냐 안하느냐?
+  if(request.indexOf("/nockanda/0") != -1){
+    //OFF
+    digitalWrite(led,LOW);
+  }else if(request.indexOf("/nockanda/1") != -1){
+    //ON
+    digitalWrite(led,HIGH);
+  }
+
+  //서버가 클라이언트에게 response를 전송한다!
+  client.print(F("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<!DOCTYPE HTML>\r\n<html>\r\n"));
+  client.print(F("<table border=1 width=400><tr><td colspan=2>Nockanda sample No1</td></tr><tr><td colspan=2>"));
+  client.print((digitalRead(led)) ? F("high") : F("low"));
+  client.print(F("</td></tr><tr><td width=200>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/1'>here</a>"));
+  client.print(F("</td><td width=200>"));
+  client.print(F("<a href='http://"));
+  client.print(WiFi.localIP());
+  client.print(F("/nockanda/0'>here</a>"));
+  client.print(F("</td></tr></html>"));
+  
+  Serial.println(F("Disconnecting from client"));
+}
