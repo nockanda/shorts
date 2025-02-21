@@ -1,0 +1,138 @@
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+
+#define led1 15
+#define led2 2
+#define led3 4
+
+const char* ssid = "nockanda";
+const char* password = "11213144";
+
+WebServer server(80);
+
+
+void handleRoot() {
+  //response
+  String postForms = "<html>\
+  <head>\
+    <meta charset=\"utf-8\">\
+    <title>ESP32의 POST방식의 웹서버로 LED제어하기!</title>\
+    <style>\
+      body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
+    </style>\
+  </head>\
+  <body>\
+    <h1>ESP32의 POST방식의 웹서버로 LED제어하기!</h1><br>\
+    현재 LED1의 상태 = $$led1$$<BR>\
+    현재 LED2의 상태 = $$led2$$<BR>\
+    현재 LED3의 상태 = $$led3$$<BR>\
+    <form method=\"post\" action=\"/nockanda\">\
+      <br>0 = led Off, 1 = led On<br>\
+      LED1:<input type=radio name=led1 value=0 checked>OFF  <input type=radio name=led1 value=1>ON<BR>\
+      LED2:<input type=radio name=led2 value=0 checked>OFF  <input type=radio name=led2 value=1>ON<BR>\
+      LED3:<input type=radio name=led3 value=0 checked>OFF  <input type=radio name=led3 value=1>ON<BR>\
+      <input type=\"submit\" value=\"제어하기!\">\
+    </form>\
+  </body>\
+</html>";
+
+  bool myled1= digitalRead(led1);
+  bool myled2= digitalRead(led2);
+  bool myled3= digitalRead(led3);
+  if(myled1) postForms.replace("$$led1$$","ON");
+  else postForms.replace("$$led1$$","OFF");
+  if(myled2) postForms.replace("$$led2$$","ON");
+  else postForms.replace("$$led2$$","OFF");
+  if(myled3) postForms.replace("$$led3$$","ON");
+  else postForms.replace("$$led3$$","OFF");
+    
+  server.send(200, "text/html", postForms);
+}
+void handleNockanda() {
+  //response
+  //server.args(); 서버로 post방식으로 넘어온 변수의 갯수
+  //server.argName(~) : 변수이름
+  //server.arg(~) : 값
+  
+  for(int i = 0;i<server.args();i++){
+    Serial.print(server.argName(i));
+    Serial.print(",");
+    Serial.print(server.arg(i));
+    Serial.println();
+    if(server.argName(i) == "led1"){
+      if(server.arg(i) == "0"){
+        digitalWrite(led1,LOW);
+      }else if(server.arg(i) == "1"){
+       digitalWrite(led1,HIGH); 
+      }
+    }
+    if(server.argName(i) == "led2"){
+      if(server.arg(i) == "0"){
+        digitalWrite(led2,LOW);
+      }else if(server.arg(i) == "1"){
+       digitalWrite(led2,HIGH); 
+      }
+    }
+    if(server.argName(i) == "led3"){
+      if(server.arg(i) == "0"){
+        digitalWrite(led3,LOW);
+      }else if(server.arg(i) == "1"){
+       digitalWrite(led3,HIGH); 
+      }
+    }
+  }
+
+  //홈페이지로 리다이렉션
+  String res = "<meta http-equiv=\"refresh\" content=\"0; url=http://"+WiFi.localIP().toString()+"\">";
+
+  server.send(200, "text/html", res);
+}
+
+void handleNotFound() {
+  String message = "File Not Found\n\n";
+  server.send(404, "text/plain", message);
+}
+
+void setup(void) {
+  Serial.begin(115200);
+  pinMode(led1,OUTPUT);
+  pinMode(led2,OUTPUT);
+  pinMode(led3,OUTPUT);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.println("");
+
+  // Wait for connection
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  if (MDNS.begin("esp32")) {
+    Serial.println("MDNS responder started");
+  }
+  //인터넷 공유기 접속 완료 지점!
+  ///////////////////////////
+
+  //클라이언트가 /경로를 호출하면 응답하게될 내용을 함수로 구현하라!
+  server.on("/", handleRoot);
+
+  server.on("/nockanda", handleNockanda);
+
+  server.onNotFound(handleNotFound);
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop(void) {
+  server.handleClient();
+  delay(2);//allow the cpu to switch to other tasks
+}
