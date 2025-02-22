@@ -1,0 +1,54 @@
+#include <RH_ASK.h>
+
+#define sensor 2
+
+//기본설정값을 사용하겠다!RH_ASK driver(2000, 11, 12, 0);
+//RH_ASK driver;
+
+//기본설정이 아니라 내가 원하는 핀을 사용하겠다!
+//RH_ASK driver(2000, 송신기핀, 수신기핀, 0);
+RH_ASK driver(2000, 11, 12, 0);
+
+
+bool old_state = HIGH;
+struct{
+  unsigned long cnt1 = 0;
+  unsigned int cnt2 = 0;
+}mystruct;
+
+
+unsigned long t = 0;
+
+void setup()
+{
+  Serial.begin(9600); //나 컴퓨터와 통신할거야~
+
+  pinMode(sensor,INPUT);
+  
+  //모듈하고 정상적으로 연결되었는가?
+  if (!driver.init()){
+     Serial.println("정상적으로 시작할 수 없는 경우!");
+  }
+}
+
+void loop()
+{
+  //일정한 간격으로 무선신호를 송출하는 부분(100ms)
+  if(millis() - t > 100){
+    t = millis();
+    driver.send((uint8_t*)&mystruct, sizeof(mystruct));
+    driver.waitPacketSent();
+    mystruct.cnt1++;
+  }
+  
+  
+  //카운터값 증가부분
+  bool now_state = digitalRead(sensor);
+
+  if(old_state == HIGH && now_state == LOW){
+    //하강엣지검출
+    mystruct.cnt2++;
+  }
+
+  old_state = now_state;  
+}
