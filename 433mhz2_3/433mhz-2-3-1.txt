@@ -1,0 +1,42 @@
+#include <RH_ASK.h>
+#include "DHT.h"
+#define DHTPIN 2
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+//기본설정값을 사용하겠다!RH_ASK driver(2000, 11, 12, 0);
+//RH_ASK driver;
+
+//기본설정이 아니라 내가 원하는 핀을 사용하겠다!
+//RH_ASK driver(2000, 송신기핀, 수신기핀, 0);
+RH_ASK driver(2000, 11, 12, 0);
+
+struct{
+  unsigned int cnt;
+  float temp;
+  float humi;
+}mystruct;
+
+void setup()
+{
+  Serial.begin(9600); //나 컴퓨터와 통신할거야~
+  dht.begin();
+  
+  //모듈하고 정상적으로 연결되었는가?
+  if (!driver.init()){
+     Serial.println("정상적으로 시작할 수 없는 경우!");
+  }
+}
+
+void loop()
+{
+  
+  mystruct.humi = dht.readHumidity(); //습도
+  mystruct.temp = dht.readTemperature(); //온도
+  
+  driver.send((uint8_t*)&mystruct, sizeof(mystruct));
+  driver.waitPacketSent();
+
+  mystruct.cnt++; //카운터 1씩 증가
+  delay(2000);
+}
