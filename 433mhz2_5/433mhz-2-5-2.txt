@@ -1,0 +1,39 @@
+#include <RH_ASK.h>
+#include <Stepper.h>
+//스탭모터의 총 스탭량
+const int stepsPerRevolution = 2048;
+                                  //IN4(4) IN2(6) IN3(5) IN1(7)
+Stepper myStepper(stepsPerRevolution, 4, 6, 5, 7);
+
+RH_ASK driver(2000, 11, 12, 0);
+
+
+void setup()
+{
+  Serial.begin(9600);
+  myStepper.setSpeed(15);
+  
+  if (!driver.init()){
+     Serial.println("init failed");
+  }
+}
+
+void loop()
+{
+  //내가 수신할수 있는 최대 크기가 수신버퍼를 만들겠다!
+  uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
+  uint8_t buflen = sizeof(buf);
+
+  //만약 수신기가 송신기가 보낸 데이터를 받았다면~
+  if (driver.recv(buf, &buflen))
+  {
+     Serial.println((char)buf[0]);
+     if(buf[0] == '+'){
+       //시계방향
+       myStepper.step(64);
+     }else if(buf[0] == '-'){
+       //반시계방향
+       myStepper.step(-64);
+     }
+  }
+}

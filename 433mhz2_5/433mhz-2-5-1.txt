@@ -1,0 +1,40 @@
+#include <RH_ASK.h>
+
+//기본설정값을 사용하겠다!RH_ASK driver(2000, 11, 12, 0);
+//RH_ASK driver;
+
+//기본설정이 아니라 내가 원하는 핀을 사용하겠다!
+//RH_ASK driver(2000, 송신기핀, 수신기핀, 0);
+RH_ASK driver(2000, 11, 12, 0);
+
+
+void setup()
+{
+  Serial.begin(9600); //나 컴퓨터와 통신할거야~
+  
+  //모듈하고 정상적으로 연결되었는가?
+  if (!driver.init()){
+     Serial.println("정상적으로 시작할 수 없는 경우!");
+  }
+}
+
+void loop()
+{
+  int analog = analogRead(A0);
+  //0~512정도까지는 왼쪽영역이고(-) 512~1023까지는 오른쪽영역(+)
+  if(analog < 300){
+    //반시계방향신호
+    char data = '-';
+    driver.send((uint8_t*)&data, sizeof(data));
+    driver.waitPacketSent();
+    delay(100);
+  }else if(analog > 700){
+    //시계방향신호
+    char data = '+';
+    driver.send((uint8_t*)&data, sizeof(data));
+    driver.waitPacketSent();
+    delay(100);
+  }
+  
+  
+}
