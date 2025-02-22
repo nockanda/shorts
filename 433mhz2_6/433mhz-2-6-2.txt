@@ -1,0 +1,38 @@
+#include <RH_ASK.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK1 2
+#define DIO1 3
+TM1637Display display1(CLK1, DIO1);
+
+RH_ASK driver(2000, 11, 12, 0);
+
+
+void setup()
+{
+  Serial.begin(9600);
+  display1.setBrightness(0x0f);
+  display1.showNumberDec(0, false);
+  if (!driver.init()){
+     Serial.println("init failed");
+  }
+}
+
+void loop()
+{
+  //내가 수신할수 있는 최대 크기가 수신버퍼를 만들겠다!
+  uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
+  uint8_t buflen = sizeof(buf);
+
+  //만약 수신기가 송신기가 보낸 데이터를 받았다면~
+  if (driver.recv(buf, &buflen))
+  {
+     if(buflen == sizeof(float)){
+        float tempC = 0;
+        memcpy(&tempC,buf,sizeof(float));
+        Serial.println(tempC);
+        display1.showNumberDec(tempC*100, false);
+     }
+  }
+}
