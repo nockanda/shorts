@@ -1,0 +1,28 @@
+#include <RH_ASK.h>
+
+//기본설정값을 사용하겠다!RH_ASK driver(2000, 11, 12, 0);
+//RH_ASK driver;
+
+//기본설정이 아니라 내가 원하는 핀을 사용하겠다!
+//RH_ASK driver(2000, 송신기핀, 수신기핀, 0);
+RH_ASK driver(2000, 11, 12, 0);
+
+void setup()
+{
+  Serial.begin(9600); //나 컴퓨터와 통신할거야~
+
+  //모듈하고 정상적으로 연결되었는가?
+  if (!driver.init()){
+     Serial.println("정상적으로 시작할 수 없는 경우!");
+  }
+}
+
+void loop()
+{
+  int raw_data = analogRead(A0);
+  byte send_data = map(raw_data,0,1023,0,255);
+  Serial.println(send_data);
+  driver.send((uint8_t*)&send_data, sizeof(send_data));
+  driver.waitPacketSent();
+  delay(100);
+}
