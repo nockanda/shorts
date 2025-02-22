@@ -1,0 +1,39 @@
+#include <RH_ASK.h>
+
+#define led 2
+
+RH_ASK driver(2000, 11, 12, 0);
+
+void setup()
+{
+  //나는 지금부터 LED를 제어할것이다!
+  pinMode(led,OUTPUT);
+  
+  Serial.begin(9600);
+  if (!driver.init()){
+     Serial.println("init failed");
+  }
+}
+
+void loop()
+{
+  //내가 수신할수 있는 최대 크기가 수신버퍼를 만들겠다!
+  uint8_t buf[RH_ASK_MAX_MESSAGE_LEN];
+  uint8_t buflen = sizeof(buf);
+
+  //만약 수신기가 송신기가 보낸 데이터를 받았다면~
+  if (driver.recv(buf, &buflen))
+  {
+    Serial.print("수신:");
+    Serial.println(buf[0],HEX);
+    Serial.println((char)buf[0]);
+    //송신기가 보낸 데이터를 정확히 수신한 경우
+    if(buf[0] == '0'){
+      //OFF
+      digitalWrite(led,LOW);
+    }else if(buf[0] == '1'){
+      //ON
+      digitalWrite(led,HIGH);
+    }
+  }
+}

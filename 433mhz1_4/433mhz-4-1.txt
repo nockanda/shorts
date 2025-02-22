@@ -1,0 +1,42 @@
+#include <RH_ASK.h>
+
+#define btn_off 2
+#define btn_on 3
+
+//기본설정값을 사용하겠다!RH_ASK driver(2000, 11, 12, 0);
+//RH_ASK driver;
+
+//기본설정이 아니라 내가 원하는 핀을 사용하겠다!
+//RH_ASK driver(2000, 송신기핀, 수신기핀, 0);
+RH_ASK driver(2000, 11, 12, 0);
+
+void setup()
+{
+  Serial.begin(9600); //나 컴퓨터와 통신할거야~
+
+  pinMode(btn_off,INPUT_PULLUP);
+  pinMode(btn_on,INPUT_PULLUP);
+
+  //모듈하고 정상적으로 연결되었는가?
+  if (!driver.init()){
+     Serial.println("정상적으로 시작할 수 없는 경우!");
+  }
+}
+
+void loop()
+{
+  //만약 OFF버튼이 눌려졌다면~
+  if(digitalRead(btn_off) == LOW){
+    char data = '0';
+    driver.send((uint8_t*)&data, sizeof(data));
+    driver.waitPacketSent();
+    delay(300); //버튼을 1회 누른것을 최소한으로 보장
+  }
+  //만약 ON버튼이 눌려졌다면~
+  if(digitalRead(btn_on) == LOW){
+    char data = '1';
+    driver.send((uint8_t*)&data, sizeof(data));
+    driver.waitPacketSent();
+    delay(300); //버튼을 1회 누른것을 최소한으로 보장
+  }
+}
