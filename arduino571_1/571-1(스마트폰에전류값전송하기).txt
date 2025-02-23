@@ -1,0 +1,162 @@
+#include <WiFi.h>
+#include <PubSubClient.h>
+//아두이노에서 i2c통신을 위한 내장 라이브러리
+#include <Wire.h> 
+//INA219전용 라이브러리!
+#include <Adafruit_INA219.h>
+
+//INA219센서를 위한 클래스의 인스턴스
+//(클래스이름)    (내가만들인스턴스명)
+Adafruit_INA219 ina219;
+
+#define relay 15
+
+//인터넷공유기 아이디 비밀번호
+const char* ssid = "nockanda";
+const char* password = "11213144";
+const char* mqtt_server = "broker.mqtt-dashboard.com";//외국에서 공짜로 제공하는 MQTT브로커
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+unsigned long lastMsg = 0;
+#define MSG_BUFFER_SIZE	(50)
+char msg[MSG_BUFFER_SIZE];
+int value = 0;
+
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+//ESP32쪽으로 MQTT데이터가 수신된다면 수신처리부
+void callback(char* topic, byte* payload, unsigned int length) {
+
+  //ESP32가 수신받은 토픽과 페이로드를 출력하는부분
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+
+  //payload : byte배열!
+  if(payload[0] == '0'){
+    //릴레이를 OFF
+    digitalWrite(relay,LOW);
+  }else if(payload[0] == '1'){
+    //릴레이를 ON
+    digitalWrite(relay,HIGH);
+  }
+
+
+}
+
+//ESP32보드가 서버와 연결이 끊어지면 재접속을 시도하는 함수
+//MQTT는 항상 연결을 유지해야하는 프로토콜이다!
+void reconnect() {
+  // Loop until we're reconnected
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      //확실하게 ESP32와 브로커가 연결이 성립된지점!
+      //여기서부터 구독할 토픽 열거하기!
+      client.subscribe("nockanda/relay");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(relay,OUTPUT);
+
+  //아두이노에 연결된 i2c센서중에 0x40이라는 ID를 가지는 녀석을 찾아라!
+  if (! ina219.begin()) {
+    Serial.println("0x40주소를 가지는 INA219가 존재하지 않습니다!");
+    while (1) { delay(10); }
+  }
+
+  // To use a slightly lower 32V, 1A range (higher precision on amps):
+  //ina219.setCalibration_32V_1A();
+  // Or to use a lower 16V, 400mA range (higher precision on volts and amps):
+  //녹칸다의 시연은 5V범위에서 진행되므로 아래 함수를 사용하도록 함!
+  //범위가 다르면 주석할 것!
+  //ina219.setCalibration_16V_400mA();
+
+  Serial.println("측정 준비 완료함!");
+  
+  setup_wifi(); //인터넷공유기와 접속하는 지점
+  client.setServer(mqtt_server, 1883);
+  client.setCallback(callback);
+}
+
+void loop() {
+  //ESP32가 서버와 연결이 끊어지면 재접속을 시도하는 지점!
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  //ESP32가 2초간격으로 메시지를 발행하기 위한부분
+  unsigned long now = millis();
+  if (now - lastMsg > 500) {
+    lastMsg = now; //이거 중요함
+
+    float shuntvoltage = 0;
+    float busvoltage = 0; //로드의 전압
+    float current_mA = 0; //로드의 전류
+    float loadvoltage = 0;
+    float power_mW = 0;
+  
+    shuntvoltage = ina219.getShuntVoltage_mV();
+    busvoltage = ina219.getBusVoltage_V();
+    current_mA = ina219.getCurrent_mA(); //전류
+    power_mW = ina219.getPower_mW();
+    loadvoltage = busvoltage + (shuntvoltage / 1000); //전압
+    
+    Serial.print("Bus Voltage:   "); Serial.print(busvoltage); Serial.println(" V");
+    Serial.print("Shunt Voltage: "); Serial.print(shuntvoltage); Serial.println(" mV");
+    Serial.print("Load Voltage:  "); Serial.print(loadvoltage); Serial.println(" V");
+    Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
+    Serial.print("Power:         "); Serial.print(power_mW); Serial.println(" mW");
+    Serial.println("");
+
+    //current_mA(float) -> char*
+    String mydata = String(current_mA); // float -> String
+    //mydata.c_srt(); //String -> char *
+    
+    Serial.print("Publish message: ");
+    Serial.println(mydata);
+    client.publish("nockanda/ina219", mydata.c_str());
+  }
+}
