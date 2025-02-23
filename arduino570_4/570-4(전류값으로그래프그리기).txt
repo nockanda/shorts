@@ -1,0 +1,244 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <WebSocketsServer.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+#include <Hash.h>
+//아두이노에서 i2c통신을 위한 내장 라이브러리
+#include <Wire.h> 
+//INA219전용 라이브러리!
+#include <Adafruit_INA219.h>
+
+//INA219센서를 위한 클래스의 인스턴스
+//(클래스이름)    (내가만들인스턴스명)
+Adafruit_INA219 ina219;
+
+#define USE_SERIAL Serial
+
+#define relay 15
+
+//웹서버의 포트는 기본 포트인 80번을 사용한다!
+WebServer server(80);
+//웹서버와 웹클라이언트가 뒷구멍으로 주고받는 데이터는 웹소켓에서 81번을 쓴다!
+WebSocketsServer webSocket = WebSocketsServer(81);
+
+String response = "\
+<html>\
+<head>\
+<meta name=\"viewport\" content=\"width=device-width\">\
+<meta charset=\"utf-8\">\
+<script src=\"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js\"></script>\
+<script>\
+  var connection = new WebSocket('ws://'+location.hostname+':81/', ['arduino']);\
+  connection.onerror = function (error) {\
+     console.log('WebSocket Error ', error);\
+  };\
+  connection.onmessage = function (e) {\
+     var mydata = JSON.parse(e.data);\
+     console.log('Server: ', mydata);\
+     document.getElementById('data1').innerText=mydata.data1+'V';\
+     document.getElementById('data2').innerText=mydata.data2+'mV';\
+     document.getElementById('data3').innerText=mydata.data3+'V';\
+     document.getElementById('data4').innerText=mydata.data4+'mA';\
+     document.getElementById('data5').innerText=mydata.data5+'mW';\
+     chart.data.datasets[0].data.shift();\
+     chart.data.datasets[0].data.push(mydata.data4);\
+     chart.update();\
+  };\
+  function send_msg(){\
+     connection.send('녹칸다 포에버!!!');\
+  }\
+  function turn_on(){\
+    connection.send('1');\
+  }\
+  function turn_off(){\
+    connection.send('0');\
+  }\
+</script>\
+</head>\
+<body>\
+<button onClick=turn_on()>릴레이ON</button><BR>\
+<button onClick=turn_off()>릴레이OFF</button><BR>\
+<table border=1 width=500>\
+  <tr>\
+     <td width=50%>Bus Voltage:</td><td id=data1>-V</td>\
+  </tr>\
+  <tr>\
+     <td>Shunt Voltage:</td><td id=data2>-mV</td>\
+  </tr>\
+  <tr>\
+     <td>Load Voltage:</td><td id=data3>-V</td>\
+  </tr>\
+  <tr>\
+     <td>Current:</td><td id=data4>-mA</td>\
+  </tr>\
+  <tr>\
+     <td>Power:</td><td id=data5>-mW</td>\
+  </tr>\
+</table>\
+<div style=\"width:500px;\">\
+<canvas id=\"line1\"></canvas>\
+</div>\
+<script>\
+var ctx = document.getElementById('line1').getContext('2d');\
+var chart = new Chart(ctx, {\
+  type: 'line',\
+  data: {\
+    labels: ['N-6', 'N-5', 'N-4', 'N-3', 'N-2', 'N-1', 'N'],\
+    datasets: [\
+        {\
+          label: 'Current',\
+          backgroundColor: 'transparent',\
+          borderColor: 'blue',\
+          data: [0, 0, 0, 0, 0, 0, 0]\
+        }\
+    ]\
+  },\
+  options: {}\
+});\
+</script>\
+</body>\
+</html>";
+
+
+//클라이언트에서 서버쪽으로 값이 전송되었을때 뭘할거냐?
+void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
+
+    switch(type) {
+        case WStype_DISCONNECTED:
+            USE_SERIAL.printf("[%u] Disconnected!\n", num);
+            break;
+        case WStype_CONNECTED: {
+            IPAddress ip = webSocket.remoteIP(num);
+            USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
+
+            //num = 소켓번호(클라이언트번호)
+            //webSocket.sendTXT(num, "Connected");
+        }
+            break;
+        case WStype_TEXT:
+        //메시지 수신부
+            USE_SERIAL.printf("[%u] get Text: %s\n", num, payload);
+            if(payload[0] == '0'){
+              //웹브라우저에서 OFF버튼을 눌렀다!
+              digitalWrite(relay,LOW);
+            }else if(payload[0] == '1'){
+              //웹브라우저에서 ON버튼을 눌렀다!
+              digitalWrite(relay,HIGH);
+            }
+
+            break;
+    }
+
+}
+
+void setup() {
+    //USE_SERIAL.begin(921600);
+    USE_SERIAL.begin(115200);
+    pinMode(relay,OUTPUT); //릴레이 출력모드!
+    //USE_SERIAL.setDebugOutput(true);
+
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+    USE_SERIAL.println();
+
+    for(uint8_t t = 4; t > 0; t--) {
+        USE_SERIAL.printf("[SETUP] BOOT WAIT %d...\n", t);
+        USE_SERIAL.flush();
+        delay(1000);
+    }
+   
+    Serial.println("녹칸다의 INA219 전류 측정하기!");
+  
+    //아두이노에 연결된 i2c센서중에 0x40이라는 ID를 가지는 녀석을 찾아라!
+    if (! ina219.begin()) {
+      Serial.println("0x40주소를 가지는 INA219가 존재하지 않습니다!");
+      while (1) { delay(10); }
+    }
+  
+    // To use a slightly lower 32V, 1A range (higher precision on amps):
+    //ina219.setCalibration_32V_1A();
+    // Or to use a lower 16V, 400mA range (higher precision on volts and amps):
+    //녹칸다의 시연은 5V범위에서 진행되므로 아래 함수를 사용하도록 함!
+    //범위가 다르면 주석할 것!
+    ina219.setCalibration_16V_400mA();
+  
+    Serial.println("측정 준비 완료함!");
+
+    //자기자신의 IP공유기 ID비밀번호 집어넣는곳!
+    WiFi.mode(WIFI_STA);
+    WiFi.begin("nockanda", "11213144");
+
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+    }
+
+    //IP공유기로부터 할당받은 IP주소를 여기서 출력한다!
+    USE_SERIAL.println("IP address: ");
+    USE_SERIAL.println(WiFi.localIP());
+  
+    //웹소켓 서버를 연다
+    webSocket.begin();
+    webSocket.onEvent(webSocketEvent);
+
+    //윈도우10, 안드로이드 안됨..의미없는 기능
+    if (MDNS.begin("esp32")) {
+      Serial.println("MDNS responder started");
+    }
+
+    //웹서버의 index.html
+    //웹서버가 클라이언트에게 response해주는 부분!
+
+    server.on("/", []() {
+        server.send(200, "text/html", response);
+    });
+
+    server.begin();
+
+    // Add service to MDNS
+    MDNS.addService("http", "tcp", 80);
+    MDNS.addService("ws", "tcp", 81);
+}
+
+unsigned long last_10sec = 0;
+unsigned int counter = 0;
+
+void loop() {
+    webSocket.loop(); //이거 있어야한다!
+    server.handleClient(); //이거도 있어야한다!
+
+    unsigned long t = millis();
+
+    //1초간격으로 뭔가 하겠다~
+    if((t - last_10sec) > 1000) {
+      last_10sec = millis();
+
+      float shuntvoltage = 0;
+      float busvoltage = 0; //로드의 전압
+      float current_mA = 0; //로드의 전류
+      float loadvoltage = 0;
+      float power_mW = 0;
+    
+      shuntvoltage = ina219.getShuntVoltage_mV();
+      busvoltage = ina219.getBusVoltage_V();
+      current_mA = ina219.getCurrent_mA(); //전류
+      power_mW = ina219.getPower_mW();
+      loadvoltage = busvoltage + (shuntvoltage / 1000); //전압
+      /*
+      Serial.print("Bus Voltage:   "); Serial.print(busvoltage); Serial.println(" V");
+      Serial.print("Shunt Voltage: "); Serial.print(shuntvoltage); Serial.println(" mV");
+      Serial.print("Load Voltage:  "); Serial.print(loadvoltage); Serial.println(" V");
+      Serial.print("Current:       "); Serial.print(current_mA); Serial.println(" mA");
+      Serial.print("Power:         "); Serial.print(power_mW); Serial.println(" mW");
+      Serial.println("");
+      */
+      //측정값을 JSON형태로 만들어라!
+      String myjson = "{\"data1\":"+String(busvoltage)+",\"data2\":"+String(shuntvoltage)+",\"data3\":"+String(loadvoltage)+",\"data4\":"+String(current_mA)+",\"data5\":"+String(power_mW)+"}";
+      Serial.println(myjson);
+      //String msg = "현재 사물인터넷보드의 시간="+String(millis());
+      webSocket.broadcastTXT(myjson); //모든클라이언트에게 메시지 전송!
+        
+    }
+}
+
