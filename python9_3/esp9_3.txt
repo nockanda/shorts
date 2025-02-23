@@ -1,0 +1,205 @@
+#include <WiFi.h> //ESP32용
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+StaticJsonDocument<96> doc_in;
+StaticJsonDocument<96> doc_out;
+
+//ESP32가 인터넷공유기와 접속해야하니 ID비밀번호 넣기!
+const char* ssid = "........";
+const char* password = "........";
+//브로커의 주소!
+const char* mqtt_server = "broker.emqx.io";
+
+#define relay 15 //여기서 냉각기가 연결되어있다고 가정한다
+float mytemp = 21;//기준온도
+bool is_auto_mode = false;
+
+//NTC서미스터 부분 시작
+#define NTC_PIN 34 //서미스터가 연결된 핀번호
+#define R1 10000 //저항의크기(10k옴 = 10000옴)
+//공식을 위한 상수 3종세트
+//아~! 나중에 온도값을 보정한다면 C1,C2,C3값이 변하면 되는것이다!
+#define c1 1.009249522e-03
+#define c2 2.378405444e-04
+#define c3 2.019202697e-07
+
+float logR2, R2, T, Tc, Tf;
+
+float filltered_temp = 0; //나는 초기값이 뭐지?
+//NTC서미스터 부분 종료
+
+//여기 있는것은 그냥 있으면됨!
+WiFiClient espClient;
+PubSubClient client(espClient);
+unsigned long lastMsg = 0;
+#define MSG_BUFFER_SIZE  (50)
+char msg[MSG_BUFFER_SIZE];
+int value = 0;
+unsigned long mqtt_t = 0; //ESP32의 시간을 저장!
+
+//ESP32가 인터넷공유기와 접속을 하기 위한 부분
+void setup_wifi() {
+
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+}
+
+//ESP32가 데이터를 브로커로부터 수신하는 부분!
+void on_message(char* topic, byte* payload, unsigned int length) {
+  //ESP32가 mqtt데이터를 수신하면 토픽과 페이로드를 출력함!
+  String mypayload = "";
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    mypayload +=(char)payload[i];
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+  String mytopic = topic;
+
+  if(mytopic == "nockanda/cooler/mode"){
+    DeserializationError error = deserializeJson(doc_in, mypayload);
+    //파이썬쪽에서 json규칙에 위배되는 데이터를 전송하는 경우 에러임!
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      return;
+    }
+    //파이썬에서 보내는 key-value쌍으로 표현한다
+    int mymode = doc_in["Auto"];
+    if(mymode == 0){
+      is_auto_mode = false;
+      //강제로 릴레이를 끈다
+      digitalWrite(relay,HIGH);
+      Serial.println("냉각기 자동화를 OFF합니다");
+    }else if(mymode == 1){
+      is_auto_mode = true;
+      Serial.println("냉각기 자동화를 ON합니다");
+    }
+  }else if(mytopic == "nockanda/cooler/settemp"){
+    DeserializationError error = deserializeJson(doc_in, mypayload);
+    //파이썬쪽에서 json규칙에 위배되는 데이터를 전송하는 경우 에러임!
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      return;
+    }
+    //파이썬에서 보내는 key-value쌍으로 표현한다
+    mytemp = doc_in["temp"];
+    Serial.print("냉각기 설정온도를");
+    Serial.print(mytemp);
+    Serial.println("'C로 설정합니다!");
+  }
+}
+//ESP32가 브로커와 접속을 유지하는 부분
+void reconnect() {
+  //ESP32가 브로커와 접속이 될때까지 무한루프를 돌리겠다!
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    //MQTT커넥션의 클라이언트 ID를 랜덤하게 적용한다!
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    //MQTT브코러와 접속하기!
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      //브로커와 접속완료후에 구독등록을 한다!
+      client.subscribe("nockanda/cooler/mode");
+      client.subscribe("nockanda/cooler/settemp");
+    } else {
+      //접속에 실패하면 5초뒤에 재접속을 시도한다!
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(relay,OUTPUT);
+  digitalWrite(relay,HIGH); //녹칸다가 가진 릴레이는 로우레벨트리거이기때문!
+  setup_wifi(); //인터넷공유기랑 접속해라!
+  client.setServer(mqtt_server, 1883); //브로커랑 접속해라!
+  client.setCallback(on_message); //ESP32가 수신하면 callback이라는 함수가 호출됨!
+  //최초 1회 필터변수에 초기값을 준다
+  int Vo = analogRead(NTC_PIN);
+  //계산하는 공식(그냥 사용하도록 하자)
+  R2 = R1 * (4095.0 / (float)Vo - 1.0);
+  logR2 = log(R2);
+  T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+  //최종결과
+  Tc = T - 273.15; //온도(도씨)
+  filltered_temp = Tc;  
+}
+
+
+
+
+void loop() {
+  //만약 ESP32가 브로커와 접속이 되어있지 않다면~
+  if (!client.connected()) {
+    //재접속 함수가 호출됨!
+    reconnect();
+  }  
+  client.loop(); //MQTT가 동작하기 위해 필요한 부분!
+
+  if(millis() - mqtt_t > 500){
+    mqtt_t = millis();
+
+
+    int Vo = analogRead(NTC_PIN);
+    //계산하는 공식(그냥 사용하도록 하자)
+    R2 = R1 * (4095.0 / (float)Vo - 1.0);
+    logR2 = log(R2);
+    T = (1.0 / (c1 + c2*logR2 + c3*logR2*logR2*logR2));
+    //최종결과
+    Tc = T - 273.15; //온도(도씨)
+    //Tf = (Tc * 9.0)/ 5.0 + 32.0; //온도(화씨) 
+  
+    filltered_temp = (filltered_temp * 0.99) + (Tc * 0.01);
+
+    //만약 측정한 온도가 23도보다 더 높으면 냉각기가 작동된다
+    if(is_auto_mode){
+      if(filltered_temp > mytemp){
+        digitalWrite(relay,LOW);
+      }else{
+        digitalWrite(relay,HIGH);
+      }
+    }
+
+    //현재온도, 자동화상태, 설정온도
+    doc_out["temp"] = filltered_temp;
+    doc_out["auto"] = is_auto_mode;
+    doc_out["settemp"] = mytemp;
+    doc_out["relay"] = !digitalRead(relay);
+    String output = "";
+    serializeJson(doc_out, output);
+
+    client.publish("nockanda/input", output.c_str());
+  }
+}
+
+
+
+
+
