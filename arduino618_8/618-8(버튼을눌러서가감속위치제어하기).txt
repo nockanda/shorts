@@ -1,0 +1,60 @@
+#include <AccelStepper.h> //라이브러리 사용~
+
+//생성자
+//IN1(2), IN2(3), IN3(4), IN4(5)
+//일때 IN1, IN3, IN2, IN4 순으로 입력
+//혹은 IN4, IN2, IN3, IN1 으로 입력
+//방향이 반대
+#define M1_IN1 2
+#define M1_IN2 3
+#define M1_IN3 4
+#define M1_IN4 5
+#define M2_IN1 6
+#define M2_IN2 7
+#define M2_IN3 8
+#define M2_IN4 9
+#define BTN1 10
+#define BTN2 11
+#define BTN3 12
+AccelStepper stepper1(8,M1_IN4,M1_IN2,M1_IN3,M1_IN1);
+AccelStepper stepper2(8,M2_IN4,M2_IN2,M2_IN3,M2_IN1);
+
+void setup()
+{  
+  Serial.begin(9600); //나 컴퓨터랑 통신할거야~
+  pinMode(BTN1,INPUT_PULLUP);
+  pinMode(BTN2,INPUT_PULLUP);
+  pinMode(BTN3,INPUT_PULLUP);
+  stepper1.setMaxSpeed(1200); //최대속도
+  stepper1.setAcceleration(300); //가속도
+  stepper2.setMaxSpeed(1200); //최대속도
+  stepper2.setAcceleration(300); //가속도
+}
+
+void loop()
+{ 
+  if(digitalRead(BTN1) == LOW){
+    stepper1.moveTo(degree2step(360));
+    stepper2.moveTo(degree2step(360)); 
+  }
+  if(digitalRead(BTN2) == LOW){
+    stepper1.moveTo(degree2step(0));
+    stepper2.moveTo(degree2step(0));
+  }
+  if(digitalRead(BTN3) == LOW){
+    stepper1.moveTo(degree2step(-360));
+    stepper2.moveTo(degree2step(-360));  
+  }
+  
+  stepper1.run(); //가감속 위치제어할때 사용함!
+  stepper2.run(); //가감속 위치제어할때 사용함!
+}
+
+int degree2step(int degree){
+  return 4096L*degree/360;
+}
+int step2deree(int mystep){
+  return 360L*mystep/4096;
+}
+
+
