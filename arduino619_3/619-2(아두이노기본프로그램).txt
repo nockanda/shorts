@@ -1,0 +1,59 @@
+//제어명령 : G01 X1024 Y2048 F1000
+//응답 : 1,2048,0,0
+#include <AccelStepper.h>
+#define M1_IN1 2
+#define M1_IN2 3
+#define M1_IN3 4
+#define M1_IN4 5
+#define M2_IN1 6
+#define M2_IN2 7
+#define M2_IN3 8
+#define M2_IN4 9
+AccelStepper stepper1(8,M1_IN1,M1_IN3,M1_IN2,M1_IN4);
+AccelStepper stepper2(8,M2_IN1,M2_IN3,M2_IN2,M2_IN4);
+
+unsigned long t = 0; //현재 타이밍을 저장할 변수
+
+void setup() {
+  Serial.begin(9600); //컴퓨터와 통신할거야!
+  stepper1.setMaxSpeed(1000);
+  stepper1.setAcceleration(300);
+  stepper2.setMaxSpeed(1000);
+  stepper2.setAcceleration(300);
+}
+
+void loop() {
+  stepper1.run();
+  stepper2.run();
+  
+  //뭔가 전송되었다!
+  if(Serial.available()){
+    String data = Serial.readStringUntil('\n');
+    int start_x = 5;
+    int end_x = data.indexOf(" ",start_x);
+    int start_y = end_x+2;
+    int end_y = data.indexOf(" ",start_y);
+    int start_f = end_y+2;
+    int end_f = data.length();
+    int x_data = data.substring(start_x,end_x).toInt();
+    int y_data = data.substring(start_y,end_y).toInt();
+    int f_data = data.substring(start_f,end_f).toInt();
+    stepper1.setMaxSpeed(f_data);
+    stepper2.setMaxSpeed(f_data);
+    stepper1.moveTo(x_data);
+    stepper2.moveTo(y_data);
+  }
+  //0.1초간격으로 모터의 상태를 출력한다!
+  if(millis() - t >= 100){
+    t = millis();
+    Serial.print(stepper1.isRunning());
+    Serial.print(",");
+    Serial.print(stepper1.currentPosition());
+    Serial.print(",");
+    Serial.print(stepper2.isRunning());
+    Serial.print(",");
+    Serial.print(stepper2.currentPosition());
+    Serial.println();
+  }
+  
+}
