@@ -1,0 +1,421 @@
+[
+    {
+        "id": "12022572646222f9",
+        "type": "serial in",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "",
+        "serial": "db9238e773d4640a",
+        "x": 140,
+        "y": 180,
+        "wires": [
+            [
+                "cce2eb5cd2e7176a"
+            ]
+        ]
+    },
+    {
+        "id": "cce2eb5cd2e7176a",
+        "type": "csv",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "",
+        "spec": "rfc",
+        "sep": ",",
+        "hdrin": "",
+        "hdrout": "none",
+        "multi": "one",
+        "ret": "\\r\\n",
+        "temp": "",
+        "skip": "0",
+        "strings": true,
+        "include_empty_strings": "",
+        "include_null_values": "",
+        "x": 290,
+        "y": 180,
+        "wires": [
+            [
+                "598cb85d9178d1a1",
+                "ecbd6b20172de867",
+                "f1728362e9865cee",
+                "2c90519ae8ce6fc4"
+            ]
+        ]
+    },
+    {
+        "id": "78605dac2c5bc42e",
+        "type": "ui_text",
+        "z": "9a6a9ae09a0c7c41",
+        "group": "51f10fd8671f20d4",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "모터1의상태",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 610,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "598cb85d9178d1a1",
+        "type": "function",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "function 1",
+        "func": "var result = \"\";\n\nif(msg.payload.col1 == 0){\n  result = \"멈춤!\";\n}else{\n  result = \"작동중!\";\n}\n\nmsg.payload = result;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 120,
+        "wires": [
+            [
+                "78605dac2c5bc42e"
+            ]
+        ]
+    },
+    {
+        "id": "9631339cb3facb19",
+        "type": "ui_text",
+        "z": "9a6a9ae09a0c7c41",
+        "group": "51f10fd8671f20d4",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "모터2의상태",
+        "format": "{{msg.payload}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 610,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "ecbd6b20172de867",
+        "type": "function",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "function 2",
+        "func": "var result = \"\";\n\nif(msg.payload.col3 == 0){\n  result = \"멈춤!\";\n}else{\n  result = \"작동중!\";\n}\n\nmsg.payload = result;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 160,
+        "wires": [
+            [
+                "9631339cb3facb19"
+            ]
+        ]
+    },
+    {
+        "id": "f1728362e9865cee",
+        "type": "ui_text",
+        "z": "9a6a9ae09a0c7c41",
+        "group": "51f10fd8671f20d4",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "모터1의위치",
+        "format": "{{msg.payload.col2}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 610,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "2c90519ae8ce6fc4",
+        "type": "ui_text",
+        "z": "9a6a9ae09a0c7c41",
+        "group": "51f10fd8671f20d4",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "name": "",
+        "label": "모터2의위치",
+        "format": "{{msg.payload.col4}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 610,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "a101b8c70d27a575",
+        "type": "ui_form",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "",
+        "label": "",
+        "group": "51f10fd8671f20d4",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "options": [
+            {
+                "label": "X위치",
+                "value": "x",
+                "type": "number",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "Y위치",
+                "value": "y",
+                "type": "number",
+                "required": true,
+                "rows": null
+            },
+            {
+                "label": "속도값",
+                "value": "f",
+                "type": "number",
+                "required": true,
+                "rows": null
+            }
+        ],
+        "formValue": {
+            "x": "",
+            "y": "",
+            "f": ""
+        },
+        "payload": "",
+        "submit": "submit",
+        "cancel": "cancel",
+        "topic": "topic",
+        "topicType": "msg",
+        "splitLayout": "",
+        "className": "",
+        "x": 150,
+        "y": 340,
+        "wires": [
+            [
+                "7d79886d515d2471"
+            ]
+        ]
+    },
+    {
+        "id": "7d79886d515d2471",
+        "type": "function",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "function 3",
+        "func": "\nvar gcode = \"G01 X\"+msg.payload.x+\" Y\"+msg.payload.y+\" F\"+msg.payload.f +\"\\n\";\n\nmsg.payload = gcode;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 340,
+        "wires": [
+            [
+                "bcce0b8e4fedeb9e"
+            ]
+        ]
+    },
+    {
+        "id": "bcce0b8e4fedeb9e",
+        "type": "serial out",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "",
+        "serial": "db9238e773d4640a",
+        "x": 540,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "912b8c4a2d145c86",
+        "type": "ui_button",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "",
+        "group": "51f10fd8671f20d4",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "원점이동!",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "G01 X0 Y0 F300",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 160,
+        "y": 420,
+        "wires": [
+            [
+                "c4673dd45db2921f"
+            ]
+        ]
+    },
+    {
+        "id": "c4673dd45db2921f",
+        "type": "function",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "function 4",
+        "func": "\nmsg.payload = msg.payload + \"\\n\";\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 420,
+        "wires": [
+            [
+                "bcce0b8e4fedeb9e"
+            ]
+        ]
+    },
+    {
+        "id": "f3543d8f72c45f73",
+        "type": "ui_button",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "",
+        "group": "51f10fd8671f20d4",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "X=8192, Y=8192",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "G01 X8192 Y8192 F1300",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 130,
+        "y": 480,
+        "wires": [
+            [
+                "c4673dd45db2921f"
+            ]
+        ]
+    },
+    {
+        "id": "5f4b79b41f171a0a",
+        "type": "ui_button",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "",
+        "group": "51f10fd8671f20d4",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "X=2048, Y=-1024",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "G01 X2048 Y-1024 F1300",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 130,
+        "y": 540,
+        "wires": [
+            [
+                "c4673dd45db2921f"
+            ]
+        ]
+    },
+    {
+        "id": "de70be3e73c21d35",
+        "type": "ui_button",
+        "z": "9a6a9ae09a0c7c41",
+        "name": "",
+        "group": "51f10fd8671f20d4",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "X=-4096, Y=-2048",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "G01 X-4096 Y-2048 F1300",
+        "payloadType": "str",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 130,
+        "y": 600,
+        "wires": [
+            [
+                "c4673dd45db2921f"
+            ]
+        ]
+    },
+    {
+        "id": "db9238e773d4640a",
+        "type": "serial-port",
+        "name": "아두이노",
+        "serialport": "COM6",
+        "serialbaud": "9600",
+        "databits": 8,
+        "parity": "none",
+        "stopbits": 1,
+        "waitfor": "",
+        "dtr": "none",
+        "rts": "none",
+        "cts": "none",
+        "dsr": "none",
+        "newline": "\\n",
+        "bin": "false",
+        "out": "char",
+        "addchar": "",
+        "responsetimeout": 10000
+    },
+    {
+        "id": "51f10fd8671f20d4",
+        "type": "ui_group",
+        "name": "Default",
+        "tab": "5fe3bc7a44522385",
+        "order": 1,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "5fe3bc7a44522385",
+        "type": "ui_tab",
+        "name": "Home",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    }
+]
