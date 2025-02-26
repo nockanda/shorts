@@ -1,0 +1,106 @@
+#include <AccelStepper.h> //라이브러리 사용~
+
+//생성자
+//IN1(2), IN2(3), IN3(4), IN4(5)
+//일때 IN1, IN3, IN2, IN4 순으로 입력
+//혹은 IN4, IN2, IN3, IN1 으로 입력
+//방향이 반대
+#define M1_IN1 2
+#define M1_IN2 3
+#define M1_IN3 4
+#define M1_IN4 5
+#define M2_IN1 6
+#define M2_IN2 7
+#define M2_IN3 8
+#define M2_IN4 9
+AccelStepper stepper1(8,M1_IN4,M1_IN2,M1_IN3,M1_IN1);
+AccelStepper stepper2(8,M2_IN4,M2_IN2,M2_IN3,M2_IN1);
+
+void setup()
+{  
+  Serial.begin(9600); //나 컴퓨터랑 통신할거야~
+  stepper1.setMaxSpeed(1200); //최대속도
+  stepper1.setAcceleration(300); //가속도
+  stepper2.setMaxSpeed(1200); //최대속도
+  stepper2.setAcceleration(300); //가속도
+}
+
+void loop()
+{ 
+  //currentPosition()
+  if(Serial.available()){
+    char c = Serial.read();
+    if(c == '0'){
+      set_position(0,0); 
+    }else if(c == '1'){
+      set_position(360,90);
+    }else if(c == '2'){
+      set_position(270,-90);
+    }
+  }
+  
+  stepper1.run(); //가감속 위치제어할때 사용함!
+  stepper2.run(); //가감속 위치제어할때 사용함!
+}
+
+void set_position(int deg1, int deg2){
+  //스탭모터1과 스탭모터2의 현재위치가 어디인가?
+  long m1_pos = stepper1.currentPosition(); //1024
+  long m2_pos = stepper2.currentPosition();
+  long m1_target = degree2step(deg1); 
+  long m2_target = degree2step(deg2); 
+  long m1_dist = abs(m1_target - m1_pos);
+  long m2_dist = abs(m2_target - m2_pos);
+
+  Serial.print("스탭모터1 pos=");
+  Serial.print(m1_pos);
+  Serial.print(", target=");
+  Serial.print(m1_target);
+  Serial.print(", dist=");
+  Serial.print(m1_dist);
+  Serial.println();
+  Serial.print("스탭모터2 pos=");
+  Serial.print(m2_pos);
+  Serial.print(", target=");
+  Serial.print(m2_target);
+  Serial.print(", dist=");
+  Serial.print(m2_dist);
+  Serial.println();
+
+  //둘중에 어디가 거리가 더 먼가?
+  //비교를 위한 거리는 절대값이어야한다!
+  if(m1_dist > m2_dist){
+    Serial.print("M1의 이동량이 M2보다 큰경우 ratio=");
+    //모터1번이 모터2번보다 더 이동량이 많은 경우
+    //모터1번은 최대속도
+    //모터2번은 비율에 맞는 속도
+    float ratio = (float)m2_dist/m1_dist;
+    Serial.println(ratio);
+    stepper1.setMaxSpeed(1200); //최대속도
+    stepper1.setAcceleration(300); //가속도
+    stepper2.setMaxSpeed(1200*ratio); //최대속도
+    stepper2.setAcceleration(300*ratio); //가속도
+  }else{
+    Serial.print("M2의 이동량이 M1보다 큰경우 ratio=");
+    //모터2번이 모터1번보다 더 이동량이 많은 경우
+    //모터2번은 최대속도
+    //모터1번은 비율에 맞는 속도
+    float ratio = (float)m1_dist/m2_dist;
+    Serial.println(ratio);
+    stepper1.setMaxSpeed(1200*ratio); //최대속도
+    stepper1.setAcceleration(300*ratio); //가속도
+    stepper2.setMaxSpeed(1200); //최대속도
+    stepper2.setAcceleration(300); //가속도
+  }
+  stepper1.moveTo(m1_target);
+  stepper2.moveTo(m2_target); 
+}
+
+int degree2step(int degree){
+  return 4096L*degree/360;
+}
+int step2deree(int mystep){
+  return 360L*mystep/4096;
+}
+
+
