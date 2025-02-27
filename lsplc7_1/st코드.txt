@@ -1,0 +1,21 @@
+//정회전 버튼을 누르면 정회전을 한다
+//relay1 : HIGH(=TRUE), relay2 : LOW(=FALSE)
+IF forward THEN
+	relay1 := TRUE;
+	relay2 := FALSE;
+END_IF;
+
+//역회전 버튼을 누르면 역회전을 한다
+//relay1 : LOW, relay2 : HIGH
+IF backward THEN
+	relay1 := FALSE;
+	relay2 := TRUE;
+END_IF;
+
+//정지버튼을 누르면 정지한다
+//relay1 : LOW, relay2 : LOW
+IF STOP THEN
+	relay1 := FALSE;
+	relay2 := FALSE;
+END_IF;
+
