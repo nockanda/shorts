@@ -1,0 +1,135 @@
+//브로커(broker)
+
+//라이브러리
+#include <ACAN_ESP32.h>
+
+//1초라는 타이밍을 생성하기 위한 시간을 담는 변수
+unsigned long t = 0;
+
+void setup() {
+  Serial.begin(115200); //나 컴퓨터와 USB로 통신할거야!
+  //캔통신의 통신속도를 결정하는 부분
+  //125k(125000UL), 250k(250000UL), 500k(500000UL)
+  ACAN_ESP32_Settings settings(125000UL); //125k
+
+  //실제로 통신할거기 때문에 루프백모드를 설정하면 안된다
+  //settings.mRequestedCANMode = ACAN_ESP32_Settings::LoopBackMode;
+  
+  //Default Tx:GPIO4, Rx:GPIO5
+  settings.mRxPin = GPIO_NUM_17; //TX2
+  settings.mTxPin = GPIO_NUM_16; //RX2
+
+  //통신속도와 연결핀을 기준으로 캔통신 초기화
+  const uint32_t ret = ACAN_ESP32::can.begin(settings) ;
+
+  //ESP32에 설정된 캔통신 파라미터가 ~~~게 되었다라는것을 단순 프린트해준다!
+  if (ret == 0) {    
+    Serial.print("Bit Rate prescaler: ") ;
+    Serial.println(settings.mBitRatePrescaler) ;
+    Serial.print("Time Segment 1:     ") ;
+    Serial.println(settings.mTimeSegment1) ;
+    Serial.print("Time Segment 2:     ") ;
+    Serial.println(settings.mTimeSegment2) ;
+    Serial.print("RJW:                ") ;
+    Serial.println(settings.mRJW) ;
+    Serial.print("Triple Sampling:    ") ;
+    Serial.println(settings.mTripleSampling ? "yes" : "no") ;
+    Serial.print("Actual bit rate:    ") ;
+    Serial.print(settings.actualBitRate ()) ;
+    Serial.println(" bit/s") ;
+    Serial.print("Exact bit rate ?    ") ;
+    Serial.println(settings.exactBitRate () ? "yes" : "no") ;
+    Serial.print("Distance            ") ;
+    Serial.print(settings.ppmFromDesiredBitRate ()) ;
+    Serial.println(" ppm") ;
+    Serial.print("Sample point:       ") ;
+    Serial.print(settings.samplePointFromBitStart ()) ;
+    Serial.println("%") ;
+    Serial.println("Configuration OK!");
+  } else {
+    Serial.print("Configuration error 0x") ;
+    Serial.println(ret, HEX) ;    
+  }
+}
+
+void loop() {
+  //일단 컴퓨터에서 데이터가 오는지 안오는지를 확인해야한다!
+  if(Serial.available()){
+    //컴퓨터에서 10byte 데이터를 전송한다
+    byte recv[10];
+    //10byte의 데이터를 수신버퍼에서 변수로 읽어들이겠다!
+    Serial.readBytes(recv,10);
+
+    unsigned int id = recv[0]*256 + recv[1];
+    //unsigned int id = 0x7E0;
+    //recv[2] ~ recv[9] : 8byte 데이터
+    
+    CANMessage txframe;
+    CANMessage rxframe;
+    txframe.id = id;
+    txframe.rtr = 0; //확실히 이게 무슨 기능을 하는지는 모르겠음!
+    txframe.len = 8; //내가 보낼 데이터의 길이
+
+    for(int i = 0;i<8;i++){
+      txframe.data[i] = recv[i+2];
+    }
+  
+    //전송
+    if (ACAN_ESP32::can.tryToSend(txframe)) {
+      //성공 
+      //Serial.println("전송에 성공했습니다");
+    }  
+
+    //2.수신데이터가 있을때까지 기다린다(블록킹)
+    unsigned long time_t = millis(); //현재 타이머 카운터
+    bool is_timeout = false;
+    while(true){
+      //아무리 기다려도 응답이 안올 수 있다
+      if(millis() - time_t > 100){
+        //무한루프가 시작된지 0.1초가 지났다
+        //request를 전송한다음 0.1초가 지났다!
+        is_timeout = true;
+        break;
+      }
+      //무한루프를 돌리면서 응답이 올때까지 기다린다
+      if(ACAN_ESP32::can.receive(rxframe)){
+        //응답이 온 상황
+        break;
+      }
+      
+    }
+    
+    //3.언제까지 기다려야하나요? -> 타임아웃처리
+    if(is_timeout){
+      //타임아웃이 발생한경우
+      //Serial.println("타임아웃이 발생했습니다!");
+      //존재하지 않는 아이디를 응답하면 타임아웃이 발생한 상황이다
+      //아이디값이 65535이면 에러가 발생한상황이다!
+      byte error[] = {0xFF,0xFF,'E','R','R','O','R','!','!','!'};
+      Serial.write(error,10);
+      Serial.flush(); //ESP32에서 PC쪽으로 데이터가 모두 전송될때까지 대기
+    }else{
+      //정상적으로 종료된 경우
+      byte msg[10];
+
+      msg[0] = rxframe.id /256;
+      msg[1] = rxframe.id %256;
+      for(int i = 0;i<8;i++){
+        msg[i+2] = rxframe.data[i];
+      }
+      
+      Serial.write(msg,10);
+      Serial.flush(); //ESP32에서 PC쪽으로 데이터가 모두 전송될때까지 대기
+      
+      //4.응답이 정상으로 도달했다면 해석해서 출력한다!
+      //Serial.print("RESPONSE : ");
+      
+      //for(int i = 0;i<rxframe.len;i++){
+        //Serial.print(rxframe.data[i],HEX);
+        //Serial.print((char)rxframe.data[i]);
+        //Serial.print(", ");
+      //}
+      //Serial.println();  
+    }
+  }
+}
