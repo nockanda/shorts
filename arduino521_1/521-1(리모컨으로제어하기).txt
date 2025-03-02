@@ -1,0 +1,67 @@
+
+#include <IRremote.h>
+#include <Servo.h>
+Servo ESC;
+
+int RECV_PIN = 8;
+IRrecv irrecv(RECV_PIN);
+decode_results results;
+
+void setup()
+{
+  Serial.begin(9600);
+  irrecv.enableIRIn(); //리모컨 활성화
+  //9번핀에 ESC가 연결되어있다!
+  ESC.attach(9,1000,2000);
+  ESC.write(0); //0~180
+  delay(2000); //ESC가 켜질때까지 약간 기다려주기!
+}
+
+void loop() {
+  if (irrecv.decode(&results)) {
+    //녹칸다가 리모컨을 눌렀다!
+    if(results.value == 0xFF6897){
+      //0
+      Serial.println("0번버튼을 눌렀다!");
+      ESC.write(0);
+    }else if(results.value == 0xFF30CF){
+      //1
+      Serial.println("1번버튼을 눌렀다!");
+      ESC.write(10);
+    }else if(results.value == 0xFF18E7){
+      //2
+      Serial.println("2번버튼을 눌렀다!");
+      ESC.write(15);
+    }else if(results.value == 0xFF7A85){
+      //3
+      Serial.println("3번버튼을 눌렀다!");
+      ESC.write(20);
+    }else if(results.value == 0xFF10EF){
+      //4
+      Serial.println("4번버튼을 눌렀다!");
+      ESC.write(25);
+    }else if(results.value == 0xFF38C7){
+      //5
+      Serial.println("5번버튼을 눌렀다!");
+      ESC.write(30);
+    }else if(results.value == 0xFF5AA5){
+      //6
+      Serial.println("6번버튼을 눌렀다!");
+      ESC.write(35);
+    }else if(results.value == 0xFF42BD){
+      //7
+      Serial.println("7번버튼을 눌렀다!");
+      ESC.write(40);
+    }else if(results.value == 0xFF4AB5){
+      //8
+      Serial.println("8번버튼을 눌렀다!");
+      ESC.write(45);
+    }else if(results.value == 0xFF52AD){
+      //9
+      Serial.println("9번버튼을 눌렀다!");
+      ESC.write(50);
+    }
+    irrecv.resume();
+  }
+  delay(100);
+}
