@@ -1,0 +1,51 @@
+
+#include <SPI.h>
+#include "RF24.h"
+
+#define btn1 2
+#define btn2 3
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openWritingPipe(address);
+  radio.stopListening();
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int data = analogRead(A0);
+  if(data < 300){
+    //속도를 올린다
+    //속도 올리는 명령 전송
+    char c = 'U';
+    radio.write(&c,sizeof(c));
+    delay(100);
+  }else if(data > 800){
+    //속도를 내리는 행위
+    char c = 'D';
+    radio.write(&c,sizeof(c));
+    delay(100);
+  }
+
+  if(digitalRead(btn1) == LOW){
+    //시동걸기 명령 전송
+    char c = 'S';
+    radio.write(&c,sizeof(c));
+    delay(200);
+  }
+  if(digitalRead(btn2) == LOW){
+    //시동끄기 명령 전송
+    char c = 'E';
+    radio.write(&c,sizeof(c));
+    delay(200);
+  }
+}

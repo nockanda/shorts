@@ -1,0 +1,72 @@
+
+#include <SPI.h>
+#include "RF24.h"
+#include <Servo.h>
+#include <Arduino.h>
+#include <TM1637Display.h>
+
+#define CLK 2
+#define DIO 3
+TM1637Display display(CLK, DIO);
+
+Servo ESC;
+
+RF24 radio(9, 10); //CE, SS
+
+uint8_t address[6] = "00001";
+
+bool engine_started = false;
+int power = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  Serial.begin(115200); //PC와 아두이노간 통신라인
+  radio.begin(); //아두이노-RF모듈간 통신라인
+  radio.setPALevel(RF24_PA_LOW); 
+  radio.openReadingPipe(0, address);
+  radio.startListening();
+
+  display.setBrightness(0x0f);
+  display.showNumberDec(0, false); //-999 ~ 9999
+
+  //9번핀에 ESC가 연결되어있다!
+  ESC.attach(8,1000,2000);
+  ESC.write(0); //0~180
+  delay(2000); //ESC가 켜질때까지 약간 기다려주기!
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  if (radio.available()){
+    //RF무선모듈쪽으로 뭔가 수신된값이 존재한다면~
+    char recv;
+    radio.read(&recv,sizeof(recv));
+
+    if(recv == 'S' && !engine_started){
+      //시동걸기
+      power = 10;
+      ESC.write(power);
+      engine_started = true;
+      display.showNumberDec(power, false);
+    }else if(recv == 'E' && engine_started){
+      //시동끄기
+      power = 0;
+      ESC.write(power);
+      engine_started = false;
+      display.showNumberDec(power, false);
+    }else if(recv == 'U' && engine_started){
+      //속도올리기
+      power++;
+      if(power > 60) power = 60;
+      ESC.write(power);
+      display.showNumberDec(power, false);
+    }else if(recv == 'D' && engine_started){
+      //속도내리기
+      power--;
+      if(power < 10) power = 10;
+      ESC.write(power);
+      display.showNumberDec(power, false);
+    }
+
+  }
+}
