@@ -1,0 +1,67 @@
+//JSON데이터를 역직렬화하기위해서 필요함!
+#include <ArduinoJson.h>
+
+#define green_led 2
+#define red_led 3
+#define buzzer 4
+#define NOTE_G6  1568
+
+void setup() {
+  //파이썬과 통신속도가 9600이다!(보-레이트가 9600이다)
+  Serial.begin(9600);
+  pinMode(green_led,OUTPUT);
+  pinMode(red_led,OUTPUT);
+}
+
+void loop() {
+  //파이썬에서 JSON데이터가 수신되면 종료문자인 \n이 있을때까지 읽는다!
+  if(Serial.available() > 0){
+    //아두이노의 수신버퍼에 데이터가 존재할경우 \n까지읽어서 myjson에 반환한다!
+    String myjson = Serial.readStringUntil('\n');
+    //myjson : 파이썬이 보낸 JSON데이터임!(역직렬화해볼까?)
+
+    //일단 비어있는 object를 적정한 사이트에 맞게 만들어줌!
+    StaticJsonDocument<96> doc;
+
+    //파이썬에서 수신한 json을 역직렬화해서 doc에 대입해줌!
+    DeserializationError error = deserializeJson(doc, myjson);
+    //파이썬쪽에서 json규칙에 위배되는 데이터를 전송하는 경우 에러임!
+    if (error) {
+      Serial.print(F("deserializeJson() failed: "));
+      Serial.println(error.f_str());
+      return;
+    }
+
+
+    int greenzone = doc["greenzone"];
+    int redzone = doc["redzone"];
+    
+    if(greenzone == 0){
+      //검출안됨
+      digitalWrite(green_led,LOW);
+    }else{
+      //검출됨
+      digitalWrite(green_led,HIGH);
+    }
+    if(redzone == 0){
+      //검출안됨
+      digitalWrite(red_led,LOW);
+      //부저작동안함
+      noTone(buzzer); //핀번호
+    }else{
+      //검출됨
+      digitalWrite(red_led,HIGH);
+      //부저에 특정한 음을 재생함
+      //핀번호, 주파수(6옥타브 솔)
+      tone(buzzer, NOTE_G6); 
+    }
+    
+    Serial.print("그린존이 검출된 갯수는 =");
+    Serial.print(greenzone);
+    Serial.print("개 이고, 레드존이 검출된 갯수는 =");
+    Serial.print(redzone);
+    Serial.println("개 입니다!");
+  }
+}
+
+
