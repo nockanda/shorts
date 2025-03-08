@@ -1,0 +1,390 @@
+#include <WiFi.h>
+#include <ArduinoJson.h>
+#include "SPI.h"
+#include "Adafruit_GFX.h"
+#include "Adafruit_ILI9341.h"
+#include <SPI.h>
+#include <SD.h>
+
+// For the Adafruit shield, these are the default.
+#define TFT_DC 2
+#define TFT_CS 5
+#define SD_CS 4
+
+#define FONT16 32
+#define FONT24 72
+#define FONT36 128
+#define FONT40 200
+
+// Use hardware SPI (on Uno, #13, #12, #11) and the above for CS/DC
+Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC);
+// If using the breakout, change pins as desired
+//Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_MOSI, TFT_CLK, TFT_RST, TFT_MISO);
+File myFile;
+
+#ifndef STASSID
+#define STASSID "nockanda" //와이파이 검색했을때 뜨는 이름
+#define STAPSK  "11213144" //패스워드
+#endif
+
+const char* ssid = STASSID;
+const char* password = STAPSK;
+
+const char* host = "apis.data.go.kr";
+const int httpsPort = 80;
+//공공데이터포털의 API키
+String yourkey = "나의API키값";
+String SIDO = "경남";
+int pageNo = 4;
+
+WiFiClient client;
+void setup() {
+  Serial.begin(115200);
+  tft.begin();
+  Serial.print(F("Initializing SD card..."));
+
+  if (!SD.begin(SD_CS)) {
+    Serial.println(F("initialization failed!"));
+    while (1);
+  }
+  Serial.println(F("initialization done."));
+  tft.setRotation(3);
+  tft.fillScreen(ILI9341_BLACK);
+  Serial.println();
+  Serial.print("connecting to ");
+  Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  
+  Serial.print("connecting to ");
+  Serial.println(host);
+
+  get_data();
+}
+
+void loop() {
+}
+
+String utf8(String input){
+  String output;
+  for(int i = 0;i<input.length();i++){
+    output += "%" + String(input[i],HEX);
+    //Serial.println(text1[i],HEX);
+  }
+  return output;
+}
+
+void get_data(){
+  //클라이언트와 서버와 커넥트
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+
+  String url = "/B552584/ArpltnInforInqireSvc/getCtprvnRltmMesureDnsty?serviceKey="+yourkey+"&returnType=json&numOfRows=10&pageNo="+String(pageNo)+"&sidoName=" + utf8(SIDO);
+
+  //사물인터넷보드에서 RSS서버로 보내는 요청!
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
+
+  //서버로부터 응답이 있을때까지 대기하겠다..
+  //언제까지 기다려야하나요..?
+  //timeout!
+  unsigned long t = millis(); //생존시간
+  while(1){
+    if(client.available()) break;
+    if(millis() - t > 10000) break;
+  }
+
+
+  //응답이 날라오는 부분!
+  Serial.println("request sent");
+
+  //칸을 그려보자!
+  
+  while(client.available()){
+    String data = client.readStringUntil('\n'); //readline();
+    if(data.indexOf("{\"response\":") != -1){
+      //만약에 현재 하나의 line을 서버로부터 수신했는데,
+      //그 line에 {"response": 문자열이 포함이 되어있다면~
+      DynamicJsonDocument doc(6144);
+      deserializeJson(doc, data);
+
+      JsonObject response_body = doc["response"]["body"];
+      int response_body_totalCount = response_body["totalCount"]; // 40
+
+      hangul2utf8(0,0,"한국환경공단 공기질 OPENAPI",ILI9341_YELLOW,16);
+      tft.drawLine(0,16,320,16,ILI9341_WHITE);
+      tft.drawLine(64,16,64,192,ILI9341_WHITE);
+      tft.drawLine(128,16,128,192,ILI9341_WHITE);
+      tft.drawLine(192,16,192,192,ILI9341_WHITE);
+      tft.drawLine(256,16,256,192,ILI9341_WHITE);
+      hangul2utf8(0,16,"측정소",ILI9341_YELLOW,16);
+      hangul2utf8(64,16,"통합수치",ILI9341_YELLOW,16);
+      hangul2utf8(128,16,"Co2",ILI9341_YELLOW,16);
+      hangul2utf8(192,16,"PM10",ILI9341_YELLOW,16);
+      hangul2utf8(256,16,"O3",ILI9341_YELLOW,16);
+      tft.drawLine(0,32,320,32,ILI9341_WHITE);
+      for (int i=0;i<10;i++) {
+        JsonObject jo = response_body["items"][i];
+        String khaiValue = jo["khaiValue"]; // "116"
+        String so2Value = jo["so2Value"]; // "0.004"
+        String coValue = jo["coValue"]; // "0.8"
+        String pm10Value = jo["pm10Value"]; // "55"
+        String dataTime = jo["dataTime"]; // "2020-12-28 20:00"
+        String no2Value = jo["no2Value"]; // "0.050"
+        String stationName = jo["stationName"]; // "광진구"
+        String o3Value = jo["o3Value"]; // "0.003"
+
+        hangul2utf8(0,16*(i+2),stationName,ILI9341_WHITE,16);
+        Serial.println("측정소명="+stationName);
+        Serial.println("측정시간="+dataTime);
+        
+        hangul2utf8(64,16*(i+2),khaiValue,ILI9341_WHITE,16);
+        Serial.println("통합대기환경수치="+khaiValue);
+  
+        hangul2utf8(64*2,16*(i+2),coValue,ILI9341_WHITE,16);
+        Serial.println("일산화탄소농도="+coValue + "PPM");
+
+        hangul2utf8(64*3,16*(i+2),pm10Value,ILI9341_WHITE,16);
+        Serial.println("미세먼지(PM10)농도="+pm10Value + "ug/m3");
+
+        hangul2utf8(64*4,16*(i+2),o3Value,ILI9341_WHITE,16);
+        Serial.println("오존농도="+o3Value + "PPM");
+        Serial.println("-----------");
+        tft.drawLine(0,48+(16*i),320,48+(16*i),ILI9341_WHITE);
+
+        if(i == 9){
+          hangul2utf8(0,192,"측정시간:"+dataTime,ILI9341_YELLOW,16);
+        }
+      }
+      
+    }
+    
+  }
+  Serial.println("DONE");
+}
+void draw_hangul(int x,int y, String utf8code,uint16_t color,int font_size){
+  
+  int font_array_count = 0;
+  String direct;
+
+  if(font_size == 16) {font_array_count=2;direct=F("nock16/");}
+  else if(font_size == 24) {font_array_count=3;direct=F("nock24/");}
+  else if(font_size == 32) {font_array_count=4;direct=F("nock32/");}
+  else if(font_size == 40) {font_array_count=5;direct=F("nock40/");}
+
+  //파일불러오기
+  myFile = SD.open("/"+direct+utf8code+F(".txt"));
+  String output;
+  if (myFile) {
+    while (myFile.available()) {
+      output += String((char)myFile.read());
+    }
+    //Serial.println(output);
+    myFile.close();
+  } else {
+    Serial.println("NO FILE");
+    return;
+  }
+
+  if(x+font_size > tft.width()){
+    x=0;
+    y+=font_size;
+  }
+  int count = 1;
+  //4개가 1line
+  for(int i =0;i<output.length();i+=2){
+    //Serial.println();
+    //Serial.println(i);
+    byte value = shex2hex(output[i], output[i+1]);
+
+    for(int j =0;j<8;j++){
+        byte temp = (128>>j);
+        if((value & temp) == temp){
+          //해당 bit가 1인것!
+              tft.drawPixel(x,y,color);
+              //Serial.print("1");
+          }else{
+              //Serial.print("0");
+          }
+          x++;
+    }
+
+   if(count % font_array_count ==0){
+    //한라인구분
+    //Serial.println();
+    if(i == output.length()-2){
+      y++;
+      y-=font_size;
+      
+    }else{
+      y++;
+      x-=font_size;
+    }
+    //Serial.print("(");
+    //Serial.print(i);
+    //Serial.print(",");
+    //Serial.print(x);
+    //Serial.print(",");
+    //Serial.print(y);
+    //Serial.println(")");
+   }
+    count++;
+  }//for
+  tft.setCursor(x, y);
+}
+
+void draw_hangul2(int x,int y, byte hexcode[],uint16_t color,int font_size){
+  int font_array_count;
+  int loop_size = font_size*font_size/8;
+  if(font_size == 16) {font_array_count=2;}
+  else if(font_size == 24) {font_array_count=3;}
+  else if(font_size == 32) {font_array_count=4;}
+  else if(font_size == 40) {font_array_count=5;}
+  int count = 1;
+  //4개가 1line
+  for(int i =0;i<loop_size;i++){
+    //Serial.println();
+    //Serial.println(i);
+    byte value = hexcode[i];
+
+    for(int j =0;j<8;j++){
+        byte temp = (128>>j);
+        if((value & temp) == temp){
+          //해당 bit가 1인것!
+              tft.drawPixel(x,y,color);
+              //Serial.print("1");
+          }else{
+              //Serial.print("0");
+          }
+          x++;
+    }
+
+   if(count % font_array_count ==0){
+    //한라인구분
+    //Serial.println();
+    if(i == loop_size-2){
+      y++;
+      y-=font_size;
+      
+    }else{
+      y++;
+      x-=font_size;
+    }
+    //Serial.print("(");
+    //Serial.print(i);
+    //Serial.print(",");
+    //Serial.print(x);
+    //Serial.print(",");
+    //Serial.print(y);
+    //Serial.println(")");
+   }
+    count++;
+  }//for
+}
+
+byte shex2hex(char data1, char data2){
+//3F
+//숫자는 -'0' 하면 숫자로된다
+//a~f 는 -'a'+10 하면 숫자로된다
+  byte output;
+
+  int a,b;
+  if(data1 >= '0' && data1 <= '9'){
+   a = data1-'0';
+  }else if(data1 >= 'a' && data1 <= 'f'){
+   a = data1-'a'+10;
+  }else if(data1 >= 'A' && data1 <= 'F'){
+   a = data1-'A'+10; 
+  }
+  if(data2 >= '0' && data2 <= '9'){
+   b = data2-'0';
+  }else if(data2 >= 'a' && data2 <= 'f'){
+   b = data2-'a'+10;
+  }else if(data2 >= 'A' && data2 <= 'F'){
+   b = data2-'A'+10; 
+  }
+
+  return a*16+b;
+
+}
+
+void hangul2utf8(int x,int y, String text,uint16_t color,int fontsize){
+  tft.setTextColor(color); 
+  if(fontsize == 16) tft.setTextSize(2);
+  if(fontsize == 24) tft.setTextSize(3);
+  
+  tft.setCursor(x, y);
+  for(int i = 0;i<text.length();){
+    if(text[i] >128){
+      //한글
+      //Serial.println("한글");
+      String output = String(text[i]&0xFF,HEX);
+      output += String(text[i+1]&0xFF,HEX);
+      output += String(text[i+2]&0xFF,HEX);
+      i+=3;
+      //Serial.println(output);
+      //이전 커서값을 가져와야한다..
+      
+      draw_hangul(tft.getCursorX(),tft.getCursorY(),output,color,fontsize);
+
+    }else{
+      //ascii
+      //Serial.println("아스키");
+      //Serial.println(text[i]);
+       tft.print(text[i]);
+      i++;
+    }
+
+  }
+}
+
+void set_hangul(String hangul,int font_size,byte data[]){
+  String output;
+  if(hangul[0] >128){
+    //한글
+    //Serial.println("한글");
+    output = String(hangul[0]&0xFF,HEX);
+    output += String(hangul[1]&0xFF,HEX);
+    output += String(hangul[2]&0xFF,HEX);
+  }else{
+    //한글이 아닙니다~!
+    return;
+  }
+  String direct;
+  if(font_size == 16) {direct=F("nock16/");}
+  else if(font_size == 24) {direct=F("nock24/");}
+  else if(font_size == 32) {direct=F("nock32/");}
+  else if(font_size == 40) {direct=F("nock40/");}
+  //Serial.println(hangul);
+  //Serial.println(direct+output+".txt");
+  myFile = SD.open("/"+direct+output+F(".txt"));
+
+  int count = 0;
+  char temp[2];
+  if (myFile) {
+    while (myFile.available()) {
+      //data += String((char)myFile.read());
+      myFile.readBytes(temp,2);
+      data[count] = shex2hex(temp[0],temp[1]);
+      count++;
+    }
+    //Serial.println(output);
+    myFile.close();
+  } else {
+    Serial.println("NO FILE");
+    return;
+  }
+
+}
