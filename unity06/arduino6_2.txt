@@ -1,0 +1,24 @@
+//지금부터는 디지털2번핀을 ir_sensor라고 부르겠따!
+#define ir_sensor 2
+
+void setup() {
+  //9600의 보-레이트로 통신을 하겠따!
+  Serial.begin(9600);
+  //근접센서가 연결된핀을 입력모드로 설정하겠따!
+  pinMode(ir_sensor,INPUT);
+}
+
+void loop() {
+  //0.1초간격으로 센서값을 측정해서
+  //감지면 '1', 미감지면 '0'을 유니티로 전송한다!
+  bool data = digitalRead(ir_sensor);
+  if(data == HIGH){
+    //감지가 안된경우!(종료문자없음!)
+    Serial.write('0');
+  }else{
+    //감지가 된경우!(종료문자없음!)
+    Serial.write('1');
+  }
+  delay(100); //0.1초 간격으로~
+}
+

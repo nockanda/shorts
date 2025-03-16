@@ -1,0 +1,24 @@
+#define trig 2
+#define echo 3
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(trig,OUTPUT); //trig 발사(출력)
+  pinMode(echo,INPUT); //echo 받기(입력)
+}
+
+void loop() {  
+  //초음파 발싸~!
+  digitalWrite(trig,LOW);
+  delayMicroseconds(2); //2마이크로초쉬기
+  digitalWrite(trig,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig,LOW);
+  //발사한다음 반사될때까지 거리측정하기
+  float duration = (pulseIn(echo, HIGH)/29.0)/2; //cm
+  //유니티로 보내는 거리값의 최대는 20cm로 한정한다!
+  if(duration > 20) duration = 20;
+  Serial.println(duration);
+  delay(100);
+}
+

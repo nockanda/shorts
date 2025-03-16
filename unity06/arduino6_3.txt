@@ -1,0 +1,22 @@
+//지금부터는 디지털2번핀을 sw_sensor라고 부르겠따!
+#define sw_sensor 2
+
+void setup() {
+  //9600의 보-레이트로 통신을 하겠따!
+  Serial.begin(9600);
+  //충격센서가 연결된핀을 입력모드로 설정하겠따!
+  pinMode(sw_sensor,INPUT);
+}
+
+void loop() {
+  bool data = digitalRead(sw_sensor);
+  if(data == HIGH){
+    //충격감지!
+    Serial.write('1');
+  }else{
+    //충격 안감지!
+    Serial.write('0');
+  }
+  delay(100); //0.1초 간격으로~
+}
+

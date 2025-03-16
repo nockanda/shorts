@@ -1,0 +1,26 @@
+#include "DHT.h"
+//온습도센서가 아두이노 몇번핀에 연결되었냐?
+#define DHTPIN 2 
+//온습도센서 종류가 3개인데 그중에 뭐냐?
+#define DHTTYPE DHT11   // DHT 11
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(9600);//통신할거야!
+  dht.begin(); //라이브러리 시작~!
+}
+
+void loop() {
+  //2초간격으로 측정하겠다!
+  delay(2000);
+
+  float h = dht.readHumidity(); //습도
+  float t = dht.readTemperature(); //온도
+
+  //출력형식 "온도,습도"
+  Serial.print(t);
+  Serial.print(",");
+  Serial.print(h);
+  Serial.println(); 
+}
+
