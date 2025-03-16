@@ -1,0 +1,15 @@
+void setup() {
+  Serial.begin(9600);
+  //아날로그는 설정할게 없음!
+}
+
+void loop() {
+  //가변저항값을 읽는다
+  //아날로그0번핀에서 10bit 아날로그값을 읽어라!
+  int rotary = analogRead(A0);
+  //컴퓨터로 전송!
+  //문자길이가 0~1023으로 가변적이니 종료문자를 붙혀야겠군!
+  Serial.println(rotary);
+  delay(100);
+}
+

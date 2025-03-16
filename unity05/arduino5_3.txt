@@ -1,0 +1,27 @@
+#define btn1 2 //앞으로 2번핀을 btn1이라 부르겠다!
+#define btn2 3 //앞으로 3번핀을 btn2라 부르겠다!
+
+void setup() {
+  Serial.begin(9600);
+  //btn1에 연결된 버튼은 아두이노의 내부풀업저항을 사용한다!
+  pinMode(btn1,INPUT_PULLUP);
+  pinMode(btn2,INPUT_PULLUP);
+}
+
+void loop() {
+  //만약 버튼1이 눌려졌다면 컴퓨터에 문자 1을 전송한다!
+  //digitalRead는 아두이노에게 버튼의 신호를 찍으라는 명령!
+  //그 결과는 LOW와 HIGH중 하나인데, 풀업방식일때는 눌렀을떄 LOW이다!
+  if(digitalRead(btn1) == LOW){
+    //버튼1이 눌려진게 감지가 되었다!
+    Serial.write("1");
+    delay(300); //너무많이 눌려지지 않도록 하려고 지연을 시킴!
+  }
+  //만약 버튼2가 눌러졌다면 컴퓨터에 문자 2를 전송한다!
+  if(digitalRead(btn2) == LOW){
+    //버튼2가 눌려진게 감지가 되었다!
+    Serial.write("2");
+    delay(300); //너무많이 눌려지지 않도록 하려고 지연을 시킴!
+  }
+}
+
