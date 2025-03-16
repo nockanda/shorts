@@ -1,3 +1,6 @@
+유니티 5편의 패키지(unity05.unitypackage)
+
+
 3.(예제2에서)유니티에 간단한 실린더모양의 object를 생성하고 아두이노의 버튼1을 누르면 실린더가 전진하고, 버튼2를 누르면 실린더가 후진하도록 하시오!(arduino5_3, script3.cs)
 ![unity5_2_bb](https://github.com/user-attachments/assets/d0dc7930-afd0-455d-85dd-aa09ec5e1afa)
 
